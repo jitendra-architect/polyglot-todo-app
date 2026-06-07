@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: todo-spring
+
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/todos}
+
+  cache:
+    type: ${CACHE_TYPE:caffeine}
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=${CACHE_TTL_SECONDS:30}s
+
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: ${PORT:3001}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+app:
+  redis:
+    enabled: ${REDIS_ENABLED:false}
+  cache:
+    ttl-seconds: ${CACHE_TTL_SECONDS:30}
+
+logging:
+  level:
+    com.todo: DEBUG
+    org.springframework.data.mongodb: INFO

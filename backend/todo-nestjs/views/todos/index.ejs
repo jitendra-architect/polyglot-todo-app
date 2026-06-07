@@ -1,0 +1,50 @@
+<section>
+  <h2>Todos</h2>
+  <form method="get" action="/todos" class="filters">
+    <label>Status:
+      <select name="status">
+        <option value="" <%= !status ? 'selected' : '' %>>All</option>
+        <option value="todo" <%= status==='todo' ? 'selected' : '' %>>Todo</option>
+        <option value="doing" <%= status==='doing' ? 'selected' : '' %>>Doing</option>
+        <option value="done" <%= status==='done' ? 'selected' : '' %>>Done</option>
+      </select>
+    </label>
+    <button type="submit">Apply</button>
+  </form>
+  <table class="table">
+    <thead>
+    <tr>
+      <th>Title</th>
+      <th>Status</th>
+      <th>Priority</th>
+      <th>Due</th>
+      <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    <% if (items && items.length) { %>
+      <% items.forEach(t => { %>
+        <tr>
+          <td><a href="/todos/<%= t._id %>"><%= t.title %></a></td>
+          <td><%= t.status %></td>
+          <td><%= t.priority %></td>
+          <td><%= t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '' %></td>
+          <td>
+            <a class="btn" href="/todos/<%= t._id %>/edit">Edit</a>
+          </td>
+        </tr>
+      <% }); %>
+    <% } else { %>
+      <tr><td colspan="5">No todos yet.</td></tr>
+    <% } %>
+    </tbody>
+  </table>
+  <div class="pagination">
+    <% for (let p = 1; p <= pages; p++) { %>
+      <% const link = `/todos?page=${p}&limit=${limit}${status ? `&status=${status}` : ''}` %>
+      <a class="<%= page===p ? 'active' : '' %>" href="<%= link %>"><%= p %></a>
+    <% } %>
+  </div>
+</section>
+
+

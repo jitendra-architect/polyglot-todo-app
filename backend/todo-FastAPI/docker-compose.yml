@@ -1,0 +1,50 @@
+version: "3.9"
+services:
+  app:
+    build: .
+    container_name: fastapi-todo-app
+    ports:
+      - "${PORT:-8000}:8000"
+    environment:
+      - APP_ENV=development
+      - PORT=8000
+      - MONGODB_URI=mongodb://mongodb:27017/todos
+      - REDIS_ENABLED=${REDIS_ENABLED:-true}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CACHE_TTL_SECONDS=30
+    depends_on:
+      - mongodb
+      - redis
+
+  worker:
+    build: .
+    container_name: fastapi-todo-worker
+    command: ["python", "-m", "app.jobs.worker"]
+    environment:
+      - APP_ENV=development
+      - MONGODB_URI=mongodb://mongodb:27017/todos
+      - REDIS_ENABLED=true
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - mongodb
+      - redis
+
+  mongodb:
+    image: mongo:7
+    container_name: fastapi-todo-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: fastapi-todo-redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+
+volumes:
+  mongo-data: {}

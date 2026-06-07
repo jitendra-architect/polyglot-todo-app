@@ -1,0 +1,25 @@
+# ── Runtime ──────────────────────────────────────────────────────────
+fastapi>=0.115.0
+uvicorn[standard]>=0.32.0
+pydantic>=2.9.0
+pydantic-settings>=2.6.0
+
+# ODM / database
+beanie>=1.27.0
+motor>=3.6.0
+
+# Caching
+redis[asyncio]>=5.2.0
+
+# Background jobs
+arq>=0.26.1
+
+# Security headers
+secure>=0.3.0
+
+# ── Dev / Test ────────────────────────────────────────────────────────
+pytest>=8.3.0
+pytest-asyncio>=0.24.0
+httpx>=0.28.0
+mongomock-motor>=0.0.29
+fakeredis[aioredis]>=2.26.0

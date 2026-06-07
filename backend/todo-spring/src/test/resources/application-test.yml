@@ -1,0 +1,21 @@
+spring:
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=100,expireAfterWrite=60s
+
+app:
+  redis:
+    enabled: false
+
+# Required by Flapdoodle embedded MongoDB — specifies which MongoDB version to download
+de:
+  flapdoodle:
+    mongodb:
+      embedded:
+        version: 7.0.14
+
+logging:
+  level:
+    com.todo: WARN
+    de.flapdoodle: WARN

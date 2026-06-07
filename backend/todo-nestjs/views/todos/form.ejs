@@ -1,0 +1,38 @@
+<section>
+  <h2><%= mode === 'edit' ? 'Edit Todo' : 'Create Todo' %></h2>
+  <form method="post" action="<%= mode === 'edit' ? `/todos/${todo._id}/update` : '/todos' %>" class="form">
+    <% if (mode === 'edit') { %>
+      <input type="hidden" name="__v" value="<%= todo.__v %>"/>
+    <% } %>
+    <div class="form-control">
+      <label>Title</label>
+      <input name="title" value="<%= todo.title || '' %>" required />
+    </div>
+    <div class="form-control">
+      <label>Description</label>
+      <textarea name="description"><%= todo.description || '' %></textarea>
+    </div>
+    <div class="form-control">
+      <label>Due Date</label>
+      <input type="date" name="dueDate" value="<%= todo.dueDate ? new Date(todo.dueDate).toISOString().substring(0,10) : '' %>"/>
+    </div>
+    <div class="form-control">
+      <label>Status</label>
+      <select name="status">
+        <option value="todo" <%= (todo.status||'todo')==='todo'?'selected':'' %>>Todo</option>
+        <option value="doing" <%= todo.status==='doing'?'selected':'' %>>Doing</option>
+        <option value="done" <%= todo.status==='done'?'selected':'' %>>Done</option>
+      </select>
+    </div>
+    <div class="form-control">
+      <label>Priority (1-5)</label>
+      <input type="number" name="priority" min="1" max="5" value="<%= todo.priority || 3 %>" />
+    </div>
+    <div class="actions">
+      <button class="btn" type="submit"><%= mode === 'edit' ? 'Save' : 'Create' %></button>
+      <a class="btn secondary" href="<%= mode === 'edit' ? `/todos/${todo._id}` : '/todos' %>">Cancel</a>
+    </div>
+  </form>
+</section>
+
+

@@ -1,0 +1,19 @@
+<section>
+  <h2><%= todo.title %></h2>
+  <div class="card">
+    <p><strong>Status:</strong> <%= todo.status %></p>
+    <p><strong>Priority:</strong> <%= todo.priority %></p>
+    <p><strong>Due:</strong> <%= todo.dueDate ? new Date(todo.dueDate).toLocaleDateString() : '-' %></p>
+    <p><strong>Description:</strong><br/><%= todo.description || '-' %></p>
+    <p><small>Version: <%= todo.__v %></small></p>
+  </div>
+  <div class="actions">
+    <a class="btn" href="/todos/<%= todo._id %>/edit">Edit</a>
+    <form method="post" action="/todos/<%= todo._id %>/delete" onsubmit="return confirm('Delete this todo?')">
+      <button class="btn danger" type="submit">Delete</button>
+    </form>
+    <a href="/todos">Back</a>
+  </div>
+</section>
+
+
