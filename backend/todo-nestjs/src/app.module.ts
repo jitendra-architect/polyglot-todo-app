@@ -1,6 +1,7 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 import configuration from './config/configuration';
 import { validationSchema } from './config/validation';
@@ -9,6 +10,9 @@ import { HealthModule } from './health/health.module';
 import { TodosModule } from './modules/todos/todos.module';
 import { CacheModule } from './services/cache.module';
 import { JobsModule } from './jobs/jobs.module';
+import { TodoEntity } from './modules/todos/entities/todo.entity';
+
+const dbProfile = process.env.DB_PROFILE ?? 'mongodb';
 
 @Module({
   imports: [
@@ -17,15 +21,29 @@ import { JobsModule } from './jobs/jobs.module';
       load: [configuration],
       validationSchema,
     }),
-    MongooseModule.forRootAsync({
-      inject: [ConfigService],
-      useFactory: async (config: ConfigService) => {
-        const uri = config.get<string>('mongodb.uri', 'mongodb://localhost:27017/todos');
-        return {
-          uri,
-        };
-      },
-    }),
+    ...(dbProfile === 'postgresql'
+      ? []
+      : [
+          MongooseModule.forRootAsync({
+            inject: [ConfigService],
+            useFactory: (config: ConfigService) => ({
+              uri: config.get<string>('mongodb.uri'),
+            }),
+          }),
+        ]),
+    ...(dbProfile === 'postgresql'
+      ? [
+          TypeOrmModule.forRootAsync({
+            inject: [ConfigService],
+            useFactory: (config: ConfigService) => ({
+              type: 'postgres',
+              url: config.get<string>('postgresql.uri'),
+              entities: [TodoEntity],
+              synchronize: true,
+            }),
+          }),
+        ]
+      : []),
     CacheModule,
     HealthModule,
     TodosModule,

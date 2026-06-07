@@ -11,6 +11,7 @@ from __future__ import annotations
 import os
 
 # Must be set before any app imports so Settings reads the right values
+os.environ.setdefault("DB_PROFILE", "mongodb")
 os.environ.setdefault("MONGODB_URI", "mongodb://localhost:27017/test_todos")
 os.environ.setdefault("REDIS_ENABLED", "false")
 

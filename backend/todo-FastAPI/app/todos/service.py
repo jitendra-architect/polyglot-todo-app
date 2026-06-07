@@ -1,15 +1,11 @@
 from __future__ import annotations
 
 import logging
-from asyncio import gather as asyncio_gather
-from datetime import datetime, timezone
-from typing import Optional
 
-from beanie import PydanticObjectId
-from bson import ObjectId
 from fastapi import HTTPException, status
 
-from app.todos.models import Todo, TodoStatus
+from app.config import settings
+from app.todos.repository import TodoRepository
 from app.todos.schemas import (
     CreateTodoSchema,
     ListTodosQuerySchema,
@@ -21,123 +17,50 @@ from app.todos.schemas import (
 logger = logging.getLogger(__name__)
 
 
-def _to_response(doc: Todo) -> TodoResponse:
-    """Convert a Beanie document to a serialisable response schema."""
-    data = doc.model_dump(by_alias=False)
-    data["_id"] = str(doc.id)
-    return TodoResponse.model_validate(data)
-
-
 class TodoService:
+    def __init__(self, repo: TodoRepository) -> None:
+        self._repo = repo
+
     async def create(self, dto: CreateTodoSchema) -> TodoResponse:
-        doc = Todo(
-            title=dto.title,
-            description=dto.description,
-            due_date=dto.due_date,
-            status=dto.status,
-            priority=dto.priority,
-        )
-        await doc.insert()
+        response = await self._repo.create(dto)
 
-        # Fire-and-forget background job (non-blocking)
         from app.jobs.tasks import enqueue_todo_created  # noqa: PLC0415
-        await enqueue_todo_created(str(doc.id), doc.title)
 
-        return _to_response(doc)
+        await enqueue_todo_created(response.id, response.title)
+        return response
 
     async def find_all(self, query: ListTodosQuerySchema) -> TodoListResponse:
-        page = query.page
-        limit = query.limit
-        skip = (page - 1) * limit
-
-        filter_: dict = {}
-        if query.status is not None:
-            filter_["status"] = query.status.value
-
-        items, total = await asyncio_gather(
-            Todo.find(filter_).sort("-created_at").skip(skip).limit(limit).to_list(),
-            Todo.find(filter_).count(),
-        )
-
-        return TodoListResponse(
-            items=[_to_response(doc) for doc in items],
-            total=total,
-            page=page,
-            limit=limit,
-        )
+        return await self._repo.find_all(query)
 
     async def find_one(self, todo_id: str) -> TodoResponse:
-        doc = await Todo.get(PydanticObjectId(todo_id))
-        if doc is None:
+        result = await self._repo.find_one(todo_id)
+        if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
-        return _to_response(doc)
+        return result
 
     async def update(self, todo_id: str, dto: UpdateTodoSchema) -> TodoResponse:
-        oid = PydanticObjectId(todo_id)
-
-        # Build the update payload — only include fields explicitly provided
-        updates: dict = {"updated_at": datetime.now(timezone.utc)}
-        if dto.title is not None:
-            updates["title"] = dto.title
-        if dto.description is not None:
-            updates["description"] = dto.description
-        if dto.due_date is not None:
-            updates["due_date"] = dto.due_date
-        if dto.status is not None:
-            updates["status"] = dto.status.value
-        if dto.priority is not None:
-            updates["priority"] = dto.priority
-
-        collection = Todo.get_motor_collection()
-
-        if dto.revision is not None:
-            # Optimistic concurrency: match document only if revision hasn't changed
-            result = await collection.find_one_and_update(
-                {"_id": ObjectId(oid), "revision": dto.revision},
-                {"$set": updates, "$inc": {"revision": 1}},
-                return_document=True,
-            )
-            if result is None:
-                # Disambiguate: does the document still exist?
-                exists = await Todo.get(oid)
-                if exists is None:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Todo not found",
-                    )
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail="Version conflict. Please reload and try again.",
-                )
-            doc = Todo.model_validate(result)
-        else:
-            # No revision supplied — blind update, no OCC check
-            result = await collection.find_one_and_update(
-                {"_id": ObjectId(oid)},
-                {"$set": updates, "$inc": {"revision": 1}},
-                return_document=True,
-            )
-            if result is None:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Todo not found",
-                )
-            doc = Todo.model_validate(result)
-
-        return _to_response(doc)
+        return await self._repo.update(todo_id, dto)
 
     async def remove(self, todo_id: str) -> None:
-        oid = PydanticObjectId(todo_id)
-        doc = await Todo.get(oid)
-        if doc is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Todo not found")
-        await doc.delete()
+        await self._repo.remove(todo_id)
 
 
-# ── Dependency ────────────────────────────────────────────────────────────────
+def make_todo_service() -> TodoService:
+    if settings.DB_PROFILE == "postgresql":
+        from app.todos.postgres_repository import PostgresTodoRepository
 
-_service_instance = TodoService()
+        return TodoService(PostgresTodoRepository())
+
+    from app.todos.mongo_repository import MongoTodoRepository
+
+    return TodoService(MongoTodoRepository())
+
+
+_service_instance: TodoService | None = None
 
 
 def get_todo_service() -> TodoService:
+    global _service_instance
+    if _service_instance is None:
+        _service_instance = make_todo_service()
     return _service_instance

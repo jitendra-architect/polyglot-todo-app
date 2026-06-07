@@ -2,9 +2,12 @@ spring:
   application:
     name: todo-spring
 
-  data:
-    mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/todos}
+  # ── Database selector ─────────────────────────────────────────────────────
+  # Change this (or set DB_PROFILE env var) to switch databases:
+  #   mongodb    → connects to MongoDB (default)
+  #   postgresql → connects to PostgreSQL
+  profiles:
+    active: ${DB_PROFILE:mongodb}
 
   cache:
     type: ${CACHE_TYPE:caffeine}
@@ -36,4 +39,54 @@ app:
 logging:
   level:
     com.todo: DEBUG
+
+---
+# ── MongoDB profile ───────────────────────────────────────────────────────
+spring:
+  config:
+    activate:
+      on-profile: mongodb
+
+  data:
+    mongodb:
+      uri: ${MONGODB_URI:mongodb://localhost:27017/todos}
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+
+logging:
+  level:
     org.springframework.data.mongodb: INFO
+
+---
+# ── PostgreSQL profile ────────────────────────────────────────────────────
+spring:
+  config:
+    activate:
+      on-profile: postgresql
+
+  datasource:
+    url: ${POSTGRESQL_URI:jdbc:postgresql://localhost:5432/todos}
+    username: ${POSTGRESQL_USER:postgres}
+    password: ${POSTGRESQL_PASSWORD:postgres}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    open-in-view: false
+    show-sql: false
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.mongo.MongoAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.mongo.MongoDataAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.mongo.MongoRepositoriesAutoConfiguration
+
+logging:
+  level:
+    org.springframework.data.jpa: INFO
+    org.hibernate.SQL: INFO

@@ -7,12 +7,13 @@ from fastapi import HTTPException
 
 from app.todos.models import TodoStatus
 from app.todos.schemas import CreateTodoSchema, ListTodosQuerySchema, UpdateTodoSchema
+from app.todos.mongo_repository import MongoTodoRepository
 from app.todos.service import TodoService
 
 
 @pytest.fixture
 def service() -> TodoService:
-    return TodoService()
+    return TodoService(MongoTodoRepository())
 
 
 @pytest.mark.anyio

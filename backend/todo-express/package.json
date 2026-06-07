@@ -27,11 +27,13 @@
     "ioredis": "^5.4.2",
     "joi": "^17.13.3",
     "mongoose": "^8.7.0",
+    "pg": "^8.13.3",
     "uuid": "^11.0.3",
     "winston": "^3.17.0",
     "zod": "^3.25.51"
   },
   "devDependencies": {
+    "@types/pg": "^8.11.10",
     "@types/express": "^5.0.3",
     "@types/node": "^22.15.0",
     "@types/supertest": "^6.0.2",

@@ -1,4 +1,7 @@
-version: "3.9"
+# Database switching via DB_PROFILE and --profile flag:
+#   MongoDB (default):    docker compose --profile mongodb up
+#   PostgreSQL:           DB_PROFILE=postgresql docker compose --profile postgresql up
+
 services:
   app:
     build: .
@@ -6,38 +9,92 @@ services:
     ports:
       - "${PORT:-8000}:8000"
     environment:
-      - APP_ENV=development
-      - PORT=8000
-      - MONGODB_URI=mongodb://mongodb:27017/todos
-      - REDIS_ENABLED=${REDIS_ENABLED:-true}
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - CACHE_TTL_SECONDS=30
+      APP_ENV: ${APP_ENV:-development}
+      PORT: 8000
+      DB_PROFILE: ${DB_PROFILE:-mongodb}
+      MONGODB_URI: mongodb://mongodb:27017/todos
+      POSTGRESQL_URI: postgresql+asyncpg://${POSTGRESQL_USER:-postgres}:${POSTGRESQL_PASSWORD:-postgres}@postgresql:5432/todos
+      POSTGRESQL_USER: ${POSTGRESQL_USER:-postgres}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD:-postgres}
+      REDIS_ENABLED: ${REDIS_ENABLED:-false}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-30}
     depends_on:
-      - mongodb
-      - redis
+      mongodb:
+        condition: service_healthy
+        required: false
+      postgresql:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_started
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   worker:
     build: .
     container_name: fastapi-todo-worker
     command: ["python", "-m", "app.jobs.worker"]
     environment:
-      - APP_ENV=development
-      - MONGODB_URI=mongodb://mongodb:27017/todos
-      - REDIS_ENABLED=true
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      APP_ENV: ${APP_ENV:-development}
+      DB_PROFILE: ${DB_PROFILE:-mongodb}
+      MONGODB_URI: mongodb://mongodb:27017/todos
+      POSTGRESQL_URI: postgresql+asyncpg://${POSTGRESQL_USER:-postgres}:${POSTGRESQL_PASSWORD:-postgres}@postgresql:5432/todos
+      REDIS_ENABLED: ${REDIS_ENABLED:-true}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     depends_on:
-      - mongodb
-      - redis
+      mongodb:
+        condition: service_healthy
+        required: false
+      postgresql:
+        condition: service_healthy
+        required: false
+      redis:
+        condition: service_started
+    restart: unless-stopped
 
   mongodb:
-    image: mongo:7
+    image: mongo:8
     container_name: fastapi-todo-mongodb
+    profiles: [mongodb]
     ports:
       - "27017:27017"
     volumes:
-      - mongo-data:/data/db
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  postgresql:
+    image: postgres:17-alpine
+    container_name: fastapi-todo-postgres
+    profiles: [postgresql]
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: todos
+      POSTGRES_USER: ${POSTGRESQL_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_USER:-postgres} -d todos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -45,6 +102,8 @@ services:
     ports:
       - "6379:6379"
     command: ["redis-server", "--appendonly", "yes"]
+    restart: unless-stopped
 
 volumes:
-  mongo-data: {}
+  mongo_data:
+  postgres_data:

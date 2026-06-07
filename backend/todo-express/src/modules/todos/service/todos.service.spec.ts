@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import { TodosService } from './todos.service';
-import { TodosRepository } from '../repository/todos.repository';
+import { MongoTodosRepository } from '../repository/mongo-todos.repository';
 import { TodoQueueService } from '../../../services/todo-queue.service';
 import { TodoStatus } from '../schemas/todo.model';
 import { NotFoundError, ConflictError } from '../../../common/errors/http-error';
@@ -12,7 +12,9 @@ import type { Config } from '../../../config/configuration';
 const mockConfig: Config = {
   env: 'test',
   port: 3001,
+  db: { profile: 'mongodb' },
   mongodb: { uri: '' },
+  postgresql: { uri: '' },
   redis: { enabled: false, url: '', host: '127.0.0.1', port: 6379 },
   cache: { ttlSeconds: 30 },
 };
@@ -20,12 +22,12 @@ const mockConfig: Config = {
 describe('TodosService', () => {
   let mongod: MongoMemoryServer;
   let service: TodosService;
-  let repo: TodosRepository;
+  let repo: MongoTodosRepository;
 
   beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
     await mongoose.connect(mongod.getUri());
-    repo = new TodosRepository();
+    repo = new MongoTodosRepository();
     service = new TodosService(repo, new TodoQueueService(mockConfig));
   });
 

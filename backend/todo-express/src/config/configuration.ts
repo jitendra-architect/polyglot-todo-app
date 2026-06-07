@@ -3,7 +3,13 @@ import * as Joi from 'joi';
 const envSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'test', 'production').default('development'),
   PORT: Joi.number().default(3001),
-  MONGODB_URI: Joi.string().required(),
+  DB_PROFILE: Joi.string().valid('mongodb', 'postgresql').default('mongodb'),
+  MONGODB_URI: Joi.string().when('DB_PROFILE', {
+    is: 'postgresql',
+    then: Joi.string().optional().default(''),
+    otherwise: Joi.string().required(),
+  }),
+  POSTGRESQL_URI: Joi.string().optional().default('postgresql://postgres:postgres@localhost:5432/todos'),
   REDIS_ENABLED: Joi.string().valid('true', 'false').default('false'),
   REDIS_URL: Joi.string().allow('', null).optional(),
   REDIS_HOST: Joi.string().default('127.0.0.1'),
@@ -24,8 +30,14 @@ const env = loadAndValidate();
 export const config = {
   env: String(env['NODE_ENV']),
   port: Number(env['PORT']),
+  db: {
+    profile: String(env['DB_PROFILE']),
+  },
   mongodb: {
-    uri: String(env['MONGODB_URI']),
+    uri: String(env['MONGODB_URI'] || ''),
+  },
+  postgresql: {
+    uri: String(env['POSTGRESQL_URI'] || ''),
   },
   redis: {
     enabled: String(env['REDIS_ENABLED']).toLowerCase() === 'true',

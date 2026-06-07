@@ -1,13 +1,25 @@
 import 'dotenv/config';
 import { config } from './config/configuration';
-import { connectMongo } from './db/mongoose';
+import { connectMongo, disconnectMongo } from './db/mongoose';
+import { connectPostgres, disconnectPostgres } from './db/postgres';
+import { MongoTodosRepository } from './modules/todos/repository/mongo-todos.repository';
+import { PostgresTodosRepository } from './modules/todos/repository/postgres-todos.repository';
+import { ITodosRepository } from './modules/todos/repository/todos-repository.interface';
 import { createApp } from './app';
 import { logger } from './common/logger';
 
 async function bootstrap() {
-  await connectMongo(config.mongodb.uri);
+  let todosRepo: ITodosRepository;
 
-  const { app, queue } = createApp(config);
+  if (config.db.profile === 'postgresql') {
+    await connectPostgres(config.postgresql.uri);
+    todosRepo = new PostgresTodosRepository();
+  } else {
+    await connectMongo(config.mongodb.uri);
+    todosRepo = new MongoTodosRepository();
+  }
+
+  const { app, queue } = createApp(config, todosRepo);
   await queue.start();
 
   const server = app.listen(config.port, () => {
@@ -18,6 +30,11 @@ async function bootstrap() {
     logger.info(`${signal} received — shutting down gracefully`);
     server.close(async () => {
       await queue.stop();
+      if (config.db.profile === 'postgresql') {
+        await disconnectPostgres();
+      } else {
+        await disconnectMongo();
+      }
       process.exit(0);
     });
     // Force exit after 10s if graceful shutdown stalls

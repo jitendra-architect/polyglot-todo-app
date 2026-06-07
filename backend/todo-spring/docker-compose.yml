@@ -1,0 +1,97 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# todo-spring — Docker Compose
+#
+# Database selection is controlled by the DB_PROFILE env var and the
+# matching Compose profile flag:
+#
+#   MongoDB (default)
+#     docker compose --profile mongodb up
+#
+#   PostgreSQL
+#     DB_PROFILE=postgresql docker compose --profile postgresql up
+#
+# The app reads DB_PROFILE and auto-excludes the unused database's
+# Spring auto-configuration, so only one DB connection is ever opened.
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Application ─────────────────────────────────────────────────────────
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: todo-spring
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      # Switch between 'mongodb' and 'postgresql' to change databases
+      DB_PROFILE: ${DB_PROFILE:-mongodb}
+
+      # MongoDB connection (used when DB_PROFILE=mongodb)
+      MONGODB_URI: mongodb://mongodb:27017/todos
+
+      # PostgreSQL connection (used when DB_PROFILE=postgresql)
+      POSTGRESQL_URI: jdbc:postgresql://postgresql:5432/todos
+      POSTGRESQL_USER: ${POSTGRESQL_USER:-postgres}
+      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD:-postgres}
+
+      # Optional cache / port overrides
+      PORT: 3001
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-30}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+        required: false   # ignored when 'mongodb' profile is not active
+      postgresql:
+        condition: service_healthy
+        required: false   # ignored when 'postgresql' profile is not active
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3001/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── MongoDB ─────────────────────────────────────────────────────────────
+  mongodb:
+    image: mongo:8
+    container_name: todo-mongo
+    profiles: [mongodb]
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+  # ── PostgreSQL ──────────────────────────────────────────────────────────
+  postgresql:
+    image: postgres:17-alpine
+    container_name: todo-postgres
+    profiles: [postgresql]
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: todos
+      POSTGRES_USER: ${POSTGRESQL_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRESQL_PASSWORD:-postgres}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_USER:-postgres} -d todos"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  postgres_data:

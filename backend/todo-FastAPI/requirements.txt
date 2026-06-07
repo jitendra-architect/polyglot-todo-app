@@ -7,6 +7,9 @@ pydantic-settings>=2.6.0
 # ODM / database
 beanie>=1.27.0
 motor>=3.6.0
+sqlalchemy[asyncio]>=2.0.0
+asyncpg>=0.30.0
+greenlet>=3.0.0
 
 # Caching
 redis[asyncio]>=5.2.0

@@ -32,7 +32,10 @@
     "helmet": "^7.1.0",
     "ioredis": "^5.4.1",
     "joi": "^17.13.3",
+    "@nestjs/typeorm": "^10.0.2",
     "mongoose": "^8.7.0",
+    "pg": "^8.13.3",
+    "typeorm": "^0.3.20",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "uuid": "^11.0.3"

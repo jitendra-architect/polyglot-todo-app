@@ -5,17 +5,15 @@
 services:
   app:
     build: .
-    container_name: nest-ssr-todo-app
+    container_name: todo-express
     ports:
-      - "${PORT:-3000}:3000"
+      - "${PORT:-3001}:3001"
     environment:
       NODE_ENV: ${NODE_ENV:-development}
-      PORT: 3000
+      PORT: 3001
       DB_PROFILE: ${DB_PROFILE:-mongodb}
       MONGODB_URI: mongodb://mongodb:27017/todos
       POSTGRESQL_URI: postgresql://${POSTGRESQL_USER:-postgres}:${POSTGRESQL_PASSWORD:-postgres}@postgresql:5432/todos
-      POSTGRESQL_USER: ${POSTGRESQL_USER:-postgres}
-      POSTGRESQL_PASSWORD: ${POSTGRESQL_PASSWORD:-postgres}
       REDIS_ENABLED: ${REDIS_ENABLED:-false}
       REDIS_HOST: redis
       REDIS_PORT: 6379
@@ -31,15 +29,15 @@ services:
         condition: service_started
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:3000/health || exit 1"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
-      start_period: 30s
+      start_period: 20s
 
   mongodb:
     image: mongo:8
-    container_name: nest-ssr-todo-mongodb
+    container_name: todo-express-mongo
     profiles: [mongodb]
     ports:
       - "27017:27017"
@@ -55,7 +53,7 @@ services:
 
   postgresql:
     image: postgres:17-alpine
-    container_name: nest-ssr-todo-postgres
+    container_name: todo-express-postgres
     profiles: [postgresql]
     ports:
       - "5432:5432"
@@ -75,7 +73,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: nest-ssr-todo-redis
+    container_name: todo-express-redis
     ports:
       - "6379:6379"
     command: ["redis-server", "--appendonly", "yes"]

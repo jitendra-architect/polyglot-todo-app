@@ -4,12 +4,15 @@ import { MongoMemoryServer } from 'mongodb-memory-server';
 import mongoose from 'mongoose';
 import type { Express } from 'express';
 import { createApp } from '../src/app';
+import { MongoTodosRepository } from '../src/modules/todos/repository/mongo-todos.repository';
 import type { Config } from '../src/config/configuration';
 
 const testConfig: Config = {
   env: 'test',
   port: 0,
+  db: { profile: 'mongodb' },
   mongodb: { uri: '' },
+  postgresql: { uri: '' },
   redis: { enabled: false, url: '', host: '127.0.0.1', port: 6379 },
   cache: { ttlSeconds: 30 },
 };
@@ -21,7 +24,7 @@ describe('Todos API — integration', () => {
   beforeAll(async () => {
     mongod = await MongoMemoryServer.create();
     await mongoose.connect(mongod.getUri());
-    ({ app } = createApp(testConfig));
+    ({ app } = createApp(testConfig, new MongoTodosRepository()));
   });
 
   afterAll(async () => {

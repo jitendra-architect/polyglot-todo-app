@@ -15,8 +15,10 @@ class Settings(BaseSettings):
     APP_ENV: str = "development"
     PORT: int = 8000
 
-    # MongoDB — required
-    MONGODB_URI: str
+    # Database selector: mongodb (default) or postgresql
+    DB_PROFILE: str = "mongodb"
+    MONGODB_URI: str = ""
+    POSTGRESQL_URI: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/todos"
 
     # Redis — optional
     REDIS_ENABLED: bool = False
@@ -34,6 +36,14 @@ class Settings(BaseSettings):
             raise ValueError(f"APP_ENV must be one of {allowed}, got '{v}'")
         return v
 
+    @field_validator("DB_PROFILE")
+    @classmethod
+    def validate_db_profile(cls, v: str) -> str:
+        allowed = {"mongodb", "postgresql"}
+        if v not in allowed:
+            raise ValueError(f"DB_PROFILE must be one of {allowed}, got '{v}'")
+        return v
+
     @field_validator("PORT")
     @classmethod
     def validate_port(cls, v: int) -> int:
@@ -49,9 +59,11 @@ class Settings(BaseSettings):
         return v
 
     @model_validator(mode="after")
-    def validate_mongodb_uri(self) -> "Settings":
-        if not self.MONGODB_URI:
-            raise ValueError("MONGODB_URI is required")
+    def validate_database_config(self) -> "Settings":
+        if self.DB_PROFILE == "mongodb" and not self.MONGODB_URI:
+            raise ValueError("MONGODB_URI is required when DB_PROFILE=mongodb")
+        if self.DB_PROFILE == "postgresql" and not self.POSTGRESQL_URI:
+            raise ValueError("POSTGRESQL_URI is required when DB_PROFILE=postgresql")
         return self
 
     @property
