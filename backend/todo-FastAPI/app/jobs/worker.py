@@ -7,7 +7,6 @@ or in Docker Compose via the ``worker`` service.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 
 from arq import run_worker

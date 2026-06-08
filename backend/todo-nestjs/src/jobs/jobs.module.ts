@@ -4,8 +4,6 @@ import { TodoQueueService } from './todo.queue';
 
 @Module({
   providers: [TodoQueueService],
-  exports: [TodoQueueService]
+  exports: [TodoQueueService],
 })
 export class JobsModule {}
-
-

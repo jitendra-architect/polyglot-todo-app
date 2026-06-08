@@ -1,3 +1,4 @@
+import 'reflect-metadata';
 import { join } from 'node:path';
 
 import { NestFactory } from '@nestjs/core';

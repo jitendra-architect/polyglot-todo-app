@@ -5,8 +5,8 @@ from enum import Enum
 from typing import Annotated, Any, ClassVar, Optional
 
 from beanie import Document, Indexed
-from pymongo import ASCENDING, IndexModel
 from pydantic import Field
+from pymongo import ASCENDING, IndexModel
 
 
 class TodoStatus(str, Enum):

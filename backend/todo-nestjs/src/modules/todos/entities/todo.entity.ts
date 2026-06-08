@@ -5,7 +5,7 @@ import {
   Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-  VersionColumn
+  VersionColumn,
 } from 'typeorm';
 import { TodoStatus } from '../schemas/todo.schema';
 

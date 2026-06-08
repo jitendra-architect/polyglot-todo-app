@@ -7,11 +7,20 @@ import { TodoQueueService } from '../../../jobs/todo.queue';
 import { TodoListResult, TodoResponse } from '../interfaces/todo-response.interface';
 import { ITodosRepository, TODOS_REPOSITORY } from '../repository/todos-repository.interface';
 
+/**
+ * Todos Service
+ * @description Service for the Todos
+ * @category Services
+ * @subcategory Todos
+ * @module TodosService
+ * @author John Doe
+ * @version 1.0.0
+ */
 @Injectable()
 export class TodosService {
   constructor(
     @Inject(TODOS_REPOSITORY) private readonly repo: ITodosRepository,
-    private readonly todoQueue: TodoQueueService
+    private readonly todoQueue: TodoQueueService,
   ) {}
 
   async create(dto: CreateTodoDto): Promise<TodoResponse> {

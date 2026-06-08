@@ -19,8 +19,7 @@ const mongooseImports =
     ? []
     : [MongooseModule.forFeatureAsync([{ name: Todo.name, useFactory: () => TodoSchema }])];
 
-const typeOrmImports =
-  dbProfile === 'postgresql' ? [TypeOrmModule.forFeature([TodoEntity])] : [];
+const typeOrmImports = dbProfile === 'postgresql' ? [TypeOrmModule.forFeature([TodoEntity])] : [];
 
 const repositoryProvider: Provider =
   dbProfile === 'postgresql'
@@ -31,6 +30,6 @@ const repositoryProvider: Provider =
   imports: [...mongooseImports, ...typeOrmImports, JobsModule],
   controllers: [TodosApiController, TodosViewController],
   providers: [TodosService, repositoryProvider],
-  exports: [TodosService]
+  exports: [TodosService],
 })
 export class TodosModule {}

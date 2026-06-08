@@ -7,7 +7,6 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 from app.cache.service import get_cache_instance
 from app.common.exceptions import (
@@ -52,7 +51,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Todo API",
-        description="Production-grade Todo REST API — FastAPI + MongoDB + Redis",
+        description="Production-grade Todo REST API — FastAPI + MongoDB/PostgreSQL + Redis",
         version="1.0.0",
         docs_url="/docs",
         redoc_url="/redoc",

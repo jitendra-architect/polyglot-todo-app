@@ -41,7 +41,7 @@ export class TodoQueueService implements OnModuleInit, OnModuleDestroy {
           this.logger.log(`Processed job: todo_created id=${job.data.id} title=${job.data.title}`);
         }
       },
-      { connection: this.connection }
+      { connection: this.connection },
     );
     this.logger.log('Jobs enabled');
   }

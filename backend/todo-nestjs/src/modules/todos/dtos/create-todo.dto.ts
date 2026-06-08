@@ -25,5 +25,3 @@ export class CreateTodoDto {
   @IsOptional()
   priority?: number = 3;
 }
-
-

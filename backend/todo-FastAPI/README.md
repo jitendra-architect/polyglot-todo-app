@@ -1,6 +1,6 @@
 # FastAPI Todo App
 
-A production-ready Todo REST API built with **FastAPI**, **MongoDB (Beanie/Motor)**, optional **Redis caching**, optional **ARQ background jobs**, and full **pytest-asyncio** test coverage.
+A production-ready Todo REST API built with **FastAPI**, **MongoDB (Beanie/Motor)** or **PostgreSQL (SQLAlchemy/asyncpg)**, optional **Redis caching**, optional **ARQ background jobs**, and full **pytest-asyncio** test coverage.
 
 This is the Python/FastAPI equivalent of the companion NestJS SSR Todo app — same features, same production standards.
 
@@ -79,7 +79,7 @@ This is the Python/FastAPI equivalent of the companion NestJS SSR Todo app — s
 ```
 app/
 ├── config.py               Pydantic BaseSettings (env validation at startup)
-├── database.py             Motor client + Beanie init / teardown
+├── database.py             MongoDB / PostgreSQL init / teardown + ping helpers
 ├── main.py                 FastAPI factory, lifespan, middleware, exception handlers
 │
 ├── common/
@@ -181,7 +181,7 @@ POST / PUT / DELETE /api/todos
 | Framework | [FastAPI](https://fastapi.tiangolo.com) 0.115+ |
 | Server | Uvicorn (ASGI) |
 | Language | Python 3.12 |
-| Database | MongoDB 7 via [Beanie](https://beanie-odm.dev) + [Motor](https://motor.readthedocs.io) |
+| Database | MongoDB 8 via [Beanie](https://beanie-odm.dev) + [Motor](https://motor.readthedocs.io), or PostgreSQL 17 via SQLAlchemy + asyncpg |
 | Validation | Pydantic v2 |
 | Config | pydantic-settings (BaseSettings) |
 | Caching | redis.asyncio — optional, in-memory fallback |
@@ -199,33 +199,50 @@ todo-FastAPI/
 │   ├── __init__.py
 │   ├── main.py                    # FastAPI app factory + lifespan
 │   ├── config.py                  # Pydantic BaseSettings
-│   ├── database.py                # Motor/Beanie connect / disconnect
+│   ├── database.py                # MongoDB / PostgreSQL connect / disconnect
 │   ├── common/
+│   │   ├── __init__.py
 │   │   ├── middleware.py          # CorrelationIdMiddleware
-│   │   └── exceptions.py         # Global exception handlers
+│   │   └── exceptions.py          # Global exception handlers
 │   ├── todos/
+│   │   ├── __init__.py
 │   │   ├── models.py              # Beanie Document (Todo)
+│   │   ├── postgres_models.py     # SQLAlchemy model (PostgreSQL)
+│   │   ├── mongo_repository.py    # MongoDB repository
+│   │   ├── postgres_repository.py # PostgreSQL repository
+│   │   ├── repository.py          # Repository ABC
 │   │   ├── schemas.py             # Pydantic request/response schemas
 │   │   ├── service.py             # CRUD + optimistic concurrency
 │   │   └── router.py              # /api/todos endpoints
 │   ├── cache/
+│   │   ├── __init__.py
 │   │   └── service.py             # CacheService (Redis + in-memory)
 │   ├── jobs/
+│   │   ├── __init__.py
 │   │   ├── tasks.py               # ARQ task definitions
 │   │   └── worker.py              # Worker entry point
 │   └── health/
+│       ├── __init__.py
 │       └── router.py              # GET /health
 │
 ├── tests/
+│   ├── __init__.py
 │   ├── conftest.py                # mongomock + HTTPX fixtures
 │   ├── test_todos_api.py          # Integration tests (HTTP layer)
 │   └── test_todos_service.py      # Unit tests (service layer)
 │
+├── scripts/
+│   ├── dev.sh                     # Local dev server (uvicorn --reload)
+│   └── worker.sh                  # ARQ worker entry point
+│
 ├── Dockerfile                     # Two-stage build
-├── docker-compose.yml             # app + worker + mongodb + redis
-├── requirements.txt
+├── docker-compose.yml             # app + worker + mongodb/postgresql + redis
+├── Makefile                       # dev, test, lint, docker-up shortcuts
+├── pyproject.toml                 # pytest + ruff configuration
+├── requirements.txt               # Runtime dependencies (Docker)
+├── requirements-dev.txt           # Test + lint dependencies
 ├── env.example
-└── pytest.ini
+└── .dockerignore
 ```
 
 ---
@@ -404,40 +421,30 @@ GET /health
 }
 ```
 
+When `DB_PROFILE=postgresql`, `mongodb` is `"disabled"` and a `postgresql` field is included (`"up"` or `"down"`).
+
 ---
 
 ## Environment Variables
 
 Copy `env.example` to `.env`:
 
-```env
-APP_ENV=development
-PORT=8000
-
-# MongoDB (required)
-MONGODB_URI=mongodb://localhost:27017/todos
-
-# Redis (optional — set REDIS_ENABLED=true to activate)
-REDIS_ENABLED=false
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-REDIS_URL=          # overrides HOST+PORT when set
-
-CACHE_TTL_SECONDS=30
-```
+See `env.example` for the full template. Key variables:
 
 | Variable | Required | Default | Description |
 |---|---|---|---|
 | `APP_ENV` | no | `development` | `development` \| `test` \| `production` |
 | `PORT` | no | `8000` | HTTP listen port |
-| `MONGODB_URI` | **yes** | — | Full MongoDB connection string |
+| `DB_PROFILE` | no | `mongodb` | `mongodb` \| `postgresql` |
+| `MONGODB_URI` | when `DB_PROFILE=mongodb` | — | Full MongoDB connection string |
+| `POSTGRESQL_URI` | when `DB_PROFILE=postgresql` | — | SQLAlchemy asyncpg DSN |
 | `REDIS_ENABLED` | no | `false` | Enable Redis caching + ARQ jobs |
 | `REDIS_URL` | no | — | Full Redis URL (overrides HOST+PORT) |
 | `REDIS_HOST` | no | `127.0.0.1` | Redis hostname |
 | `REDIS_PORT` | no | `6379` | Redis port |
 | `CACHE_TTL_SECONDS` | no | `30` | Cache TTL in seconds |
 
-Settings are validated at startup via Pydantic `BaseSettings`. The app refuses to boot if `MONGODB_URI` is missing or any value is invalid.
+Settings are validated at startup via Pydantic `BaseSettings`. The app refuses to boot if the URI for the active `DB_PROFILE` is missing or any value is invalid.
 
 ---
 
@@ -457,14 +464,14 @@ python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 
 # 2. Install dependencies
-pip install -r requirements.txt
+make install-dev            # or: pip install -r requirements-dev.txt
 
 # 3. Configure environment
 cp env.example .env
-# edit .env — set MONGODB_URI at minimum
+# edit .env — set MONGODB_URI (or POSTGRESQL_URI when DB_PROFILE=postgresql)
 
 # 4. Start the API server
-uvicorn app.main:app --reload --port 8000
+make dev                    # or: ./scripts/dev.sh
 ```
 
 API: `http://localhost:8000`
@@ -474,32 +481,38 @@ ReDoc: `http://localhost:8000/redoc`
 ### Running the ARQ Worker (optional, requires Redis)
 
 ```bash
-# In a separate terminal
-python -m app.jobs.worker
+make worker                 # or: ./scripts/worker.sh
 ```
 
 ---
 
 ## Docker Compose
 
-Starts the API server, ARQ worker, MongoDB, and Redis:
+Database switching uses `DB_PROFILE` and compose **profiles**:
 
 ```bash
-docker-compose up --build
+# MongoDB (default)
+make docker-up
+# or: docker compose --profile mongodb up --build
+
+# PostgreSQL
+make docker-up-pg
+# or: DB_PROFILE=postgresql docker compose --profile postgresql up --build
 ```
 
 ```
 Services:
-  app      → http://localhost:8000  (FastAPI server)
-  worker   → (ARQ background worker, same image)
-  mongodb  → localhost:27017        (mongo:7, persisted volume)
-  redis    → localhost:6379         (redis:7-alpine, AOF persistence)
+  app        → http://localhost:8000  (FastAPI server)
+  worker     → (ARQ background worker, same image)
+  mongodb    → localhost:27017        (mongo:8, profile: mongodb)
+  postgresql → localhost:5432         (postgres:17, profile: postgresql)
+  redis      → localhost:6379         (redis:7-alpine, AOF persistence)
 ```
 
 Run without Redis:
 
 ```bash
-REDIS_ENABLED=false docker-compose up app mongodb --build
+REDIS_ENABLED=false docker compose --profile mongodb up app mongodb --build
 ```
 
 ---
@@ -509,13 +522,20 @@ REDIS_ENABLED=false docker-compose up app mongodb --build
 ### Run all tests
 
 ```bash
-pytest
+make test                   # or: pytest
 ```
 
 ### With coverage
 
 ```bash
-pytest --cov=app --cov-report=term-missing
+make test-cov               # or: pytest --cov=app --cov-report=term-missing
+```
+
+### Lint and format
+
+```bash
+make lint                   # ruff check
+make format                 # ruff format
 ```
 
 No real MongoDB or Redis is required — `mongomock_motor` and `fakeredis` provide in-memory alternatives.

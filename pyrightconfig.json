@@ -1,0 +1,12 @@
+{
+  "venvPath": "backend/todo-FastAPI",
+  "venv": ".venv",
+  "executionEnvironments": [
+    {
+      "root": "backend/todo-FastAPI",
+      "pythonVersion": "3.12",
+      "extraPaths": ["backend/todo-FastAPI"]
+    }
+  ],
+  "typeCheckingMode": "basic"
+}

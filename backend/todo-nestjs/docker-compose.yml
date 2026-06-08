@@ -7,7 +7,7 @@ services:
     build: .
     container_name: nest-ssr-todo-app
     ports:
-      - "${PORT:-3000}:3000"
+      - '${PORT:-3000}:3000'
     environment:
       NODE_ENV: ${NODE_ENV:-development}
       PORT: 3000
@@ -31,7 +31,7 @@ services:
         condition: service_started
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://localhost:3000/health || exit 1"]
+      test: ['CMD-SHELL', 'curl -sf http://localhost:3000/health || exit 1']
       interval: 15s
       timeout: 5s
       retries: 5
@@ -42,11 +42,11 @@ services:
     container_name: nest-ssr-todo-mongodb
     profiles: [mongodb]
     ports:
-      - "27017:27017"
+      - '27017:27017'
     volumes:
       - mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ['CMD', 'mongosh', '--eval', "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -58,7 +58,7 @@ services:
     container_name: nest-ssr-todo-postgres
     profiles: [postgresql]
     ports:
-      - "5432:5432"
+      - '5432:5432'
     environment:
       POSTGRES_DB: todos
       POSTGRES_USER: ${POSTGRESQL_USER:-postgres}
@@ -66,7 +66,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRESQL_USER:-postgres} -d todos"]
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRESQL_USER:-postgres} -d todos']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -77,8 +77,8 @@ services:
     image: redis:7-alpine
     container_name: nest-ssr-todo-redis
     ports:
-      - "6379:6379"
-    command: ["redis-server", "--appendonly", "yes"]
+      - '6379:6379'
+    command: ['redis-server', '--appendonly', 'yes']
     restart: unless-stopped
 
 volumes:

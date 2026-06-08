@@ -42,15 +42,10 @@
       <artifactId>spring-boot-starter-data-mongodb</artifactId>
     </dependency>
 
-    <!-- ── JPA / PostgreSQL ─────────────────────────────────────────────── -->
+    <!-- ── JPA (compile-time; beans active only on Spring profile 'postgresql') ── -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-jpa</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.postgresql</groupId>
-      <artifactId>postgresql</artifactId>
-      <scope>runtime</scope>
     </dependency>
 
     <!-- ── Cache ────────────────────────────────────────────────────────── -->
@@ -146,5 +141,24 @@
       </plugin>
     </plugins>
   </build>
+
+  <profiles>
+    <profile>
+      <id>postgresql</id>
+      <activation>
+        <property>
+          <name>DB_PROFILE</name>
+          <value>postgresql</value>
+        </property>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>org.postgresql</groupId>
+          <artifactId>postgresql</artifactId>
+          <scope>runtime</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
 
 </project>

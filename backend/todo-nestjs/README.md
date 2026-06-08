@@ -174,18 +174,18 @@ POST / PUT / DELETE /api/todos
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Framework | [NestJS](https://nestjs.com) v10 (Platform: Express) |
-| Language | TypeScript 5 |
-| Database | MongoDB 7 via [Mongoose](https://mongoosejs.com) v8 |
-| Templating (SSR) | EJS + express-ejs-layouts |
-| Caching | Redis (ioredis) — optional, falls back to in-memory |
-| Job Queue | BullMQ (optional, requires Redis) |
-| Config / Validation | @nestjs/config + Joi |
-| Security | helmet |
-| Testing | Jest + Supertest + mongodb-memory-server |
-| Containerisation | Docker (multi-stage) + Docker Compose |
+| Layer               | Technology                                           |
+| ------------------- | ---------------------------------------------------- |
+| Framework           | [NestJS](https://nestjs.com) v10 (Platform: Express) |
+| Language            | TypeScript 5                                         |
+| Database            | MongoDB 7 via [Mongoose](https://mongoosejs.com) v8  |
+| Templating (SSR)    | EJS + express-ejs-layouts                            |
+| Caching             | Redis (ioredis) — optional, falls back to in-memory  |
+| Job Queue           | BullMQ (optional, requires Redis)                    |
+| Config / Validation | @nestjs/config + Joi                                 |
+| Security            | helmet                                               |
+| Testing             | Jest + Supertest + mongodb-memory-server             |
+| Containerisation    | Docker (multi-stage) + Docker Compose                |
 
 ---
 
@@ -271,17 +271,17 @@ todo-app/
 
 ### Todo Document
 
-| Field | Type | Required | Default | Constraints |
-|---|---|---|---|---|
-| `_id` | ObjectId | auto | — | Mongoose auto |
-| `title` | string | yes | — | trimmed |
-| `description` | string | no | — | trimmed |
-| `dueDate` | Date | no | — | — |
-| `status` | enum | yes | `todo` | `todo` \| `doing` \| `done` |
-| `priority` | number | yes | `3` | min 1, max 5 |
-| `createdAt` | Date | auto | — | Mongoose timestamps |
-| `updatedAt` | Date | auto | — | Mongoose timestamps |
-| `__v` | number | auto | `0` | Optimistic concurrency version |
+| Field         | Type     | Required | Default | Constraints                    |
+| ------------- | -------- | -------- | ------- | ------------------------------ |
+| `_id`         | ObjectId | auto     | —       | Mongoose auto                  |
+| `title`       | string   | yes      | —       | trimmed                        |
+| `description` | string   | no       | —       | trimmed                        |
+| `dueDate`     | Date     | no       | —       | —                              |
+| `status`      | enum     | yes      | `todo`  | `todo` \| `doing` \| `done`    |
+| `priority`    | number   | yes      | `3`     | min 1, max 5                   |
+| `createdAt`   | Date     | auto     | —       | Mongoose timestamps            |
+| `updatedAt`   | Date     | auto     | —       | Mongoose timestamps            |
+| `__v`         | number   | auto     | `0`     | Optimistic concurrency version |
 
 **Index**: `{ status: 1, dueDate: 1 }` (compound)
 
@@ -301,11 +301,11 @@ GET /api/todos
 
 **Query Parameters**
 
-| Param | Type | Default | Constraints |
-|---|---|---|---|
-| `page` | integer | `1` | min 1 |
-| `limit` | integer | `10` | min 1, max 100 |
-| `status` | string | — | `todo` \| `doing` \| `done` |
+| Param    | Type    | Default | Constraints                 |
+| -------- | ------- | ------- | --------------------------- |
+| `page`   | integer | `1`     | min 1                       |
+| `limit`  | integer | `10`    | min 1, max 100              |
+| `status` | string  | —       | `todo` \| `doing` \| `done` |
 
 **Response `200`**
 
@@ -343,8 +343,14 @@ GET /api/todos/:id
 **Response `200`** — single `TodoResponse` object (same shape as an item above)
 
 **Response `404`**
+
 ```json
-{ "statusCode": 404, "message": "Todo not found", "path": "/api/todos/bad-id", "correlationId": "uuid" }
+{
+  "statusCode": 404,
+  "message": "Todo not found",
+  "path": "/api/todos/bad-id",
+  "correlationId": "uuid"
+}
 ```
 
 ---
@@ -368,13 +374,13 @@ Content-Type: application/json
 }
 ```
 
-| Field | Type | Required | Constraints |
-|---|---|---|---|
-| `title` | string | yes | non-empty |
-| `description` | string | no | — |
-| `dueDate` | ISO 8601 date string | no | — |
-| `status` | `todo` \| `doing` \| `done` | no | default `todo` |
-| `priority` | integer | no | 1–5, default 3 |
+| Field         | Type                        | Required | Constraints    |
+| ------------- | --------------------------- | -------- | -------------- |
+| `title`       | string                      | yes      | non-empty      |
+| `description` | string                      | no       | —              |
+| `dueDate`     | ISO 8601 date string        | no       | —              |
+| `status`      | `todo` \| `doing` \| `done` | no       | default `todo` |
+| `priority`    | integer                     | no       | 1–5, default 3 |
 
 **Response `201`** — created `TodoResponse`
 
@@ -403,6 +409,7 @@ All fields are optional. Send `__v` to enable optimistic concurrency checking.
 **Response `200`** — updated `TodoResponse`
 
 **Response `409`** — version conflict (another writer updated the document first)
+
 ```json
 { "statusCode": 409, "message": "Version conflict. Please reload and try again." }
 ```
@@ -418,6 +425,7 @@ DELETE /api/todos/:id
 ```
 
 **Response `200`**
+
 ```json
 { "status": "ok" }
 ```
@@ -433,6 +441,7 @@ GET /health
 ```
 
 **Response `200`**
+
 ```json
 {
   "status": "ok",
@@ -450,16 +459,16 @@ GET /health
 
 All SSR routes render EJS templates wrapped in `views/layout.ejs`.
 
-| Method | Path | Template | Description |
-|---|---|---|---|
-| `GET` | `/` | — | Redirects to `/todos` |
-| `GET` | `/todos` | `todos/index` | Paginated list with status filter |
-| `GET` | `/todos/new` | `todos/form` | Create form |
-| `GET` | `/todos/:id` | `todos/detail` | Todo detail view |
-| `GET` | `/todos/:id/edit` | `todos/form` | Edit form (pre-filled, includes `__v`) |
-| `POST` | `/todos` | — | Submit create → redirect to detail |
-| `POST` | `/todos/:id/update` | — | Submit edit → redirect to detail |
-| `POST` | `/todos/:id/delete` | — | Submit delete → redirect to list |
+| Method | Path                | Template       | Description                            |
+| ------ | ------------------- | -------------- | -------------------------------------- |
+| `GET`  | `/`                 | —              | Redirects to `/todos`                  |
+| `GET`  | `/todos`            | `todos/index`  | Paginated list with status filter      |
+| `GET`  | `/todos/new`        | `todos/form`   | Create form                            |
+| `GET`  | `/todos/:id`        | `todos/detail` | Todo detail view                       |
+| `GET`  | `/todos/:id/edit`   | `todos/form`   | Edit form (pre-filled, includes `__v`) |
+| `POST` | `/todos`            | —              | Submit create → redirect to detail     |
+| `POST` | `/todos/:id/update` | —              | Submit edit → redirect to detail       |
+| `POST` | `/todos/:id/delete` | —              | Submit delete → redirect to list       |
 
 > HTML forms use `POST` for all mutations (browser compatibility). The `__v` hidden field on the edit form enables optimistic concurrency for SSR edits.
 
@@ -486,16 +495,16 @@ REDIS_URL=                                    # overrides HOST+PORT when set
 CACHE_TTL_SECONDS=30
 ```
 
-| Variable | Required | Default | Description |
-|---|---|---|---|
-| `NODE_ENV` | no | `development` | `development` \| `test` \| `production` |
-| `PORT` | no | `3000` | HTTP listen port |
-| `MONGODB_URI` | **yes** | — | Full MongoDB connection string |
-| `REDIS_ENABLED` | no | `false` | Enable Redis caching and BullMQ jobs |
-| `REDIS_URL` | no | — | Full Redis URL (overrides HOST+PORT) |
-| `REDIS_HOST` | no | `127.0.0.1` | Redis hostname |
-| `REDIS_PORT` | no | `6379` | Redis port |
-| `CACHE_TTL_SECONDS` | no | `30` | Cache entry TTL in seconds |
+| Variable            | Required | Default       | Description                             |
+| ------------------- | -------- | ------------- | --------------------------------------- |
+| `NODE_ENV`          | no       | `development` | `development` \| `test` \| `production` |
+| `PORT`              | no       | `3000`        | HTTP listen port                        |
+| `MONGODB_URI`       | **yes**  | —             | Full MongoDB connection string          |
+| `REDIS_ENABLED`     | no       | `false`       | Enable Redis caching and BullMQ jobs    |
+| `REDIS_URL`         | no       | —             | Full Redis URL (overrides HOST+PORT)    |
+| `REDIS_HOST`        | no       | `127.0.0.1`   | Redis hostname                          |
+| `REDIS_PORT`        | no       | `6379`        | Redis port                              |
+| `CACHE_TTL_SECONDS` | no       | `30`          | Cache entry TTL in seconds              |
 
 Env vars are validated at startup via Joi. The app refuses to boot if `MONGODB_URI` is missing or any value is invalid.
 
@@ -534,16 +543,16 @@ npm start
 
 ### Available Scripts
 
-| Script | Description |
-|---|---|
+| Script              | Description                           |
+| ------------------- | ------------------------------------- |
 | `npm run start:dev` | Start with hot-reload (ts-node watch) |
-| `npm run build` | Compile TypeScript to `dist/` |
-| `npm start` | Run compiled production build |
-| `npm run lint` | ESLint check |
-| `npm run format` | Prettier format all sources |
-| `npm test` | Unit tests |
-| `npm run test:cov` | Unit tests with coverage report |
-| `npm run test:e2e` | End-to-end tests |
+| `npm run build`     | Compile TypeScript to `dist/`         |
+| `npm start`         | Run compiled production build         |
+| `npm run lint`      | ESLint check                          |
+| `npm run format`    | Prettier format all sources           |
+| `npm test`          | Unit tests                            |
+| `npm run test:cov`  | Unit tests with coverage report       |
+| `npm run test:e2e`  | End-to-end tests                      |
 
 ---
 

@@ -11,9 +11,7 @@ import { ITodosRepository } from './todos-repository.interface';
 
 @Injectable()
 export class MongoTodosRepository implements ITodosRepository {
-  constructor(
-    @InjectModel(Todo.name) private readonly model: Model<TodoDocument>
-  ) {}
+  constructor(@InjectModel(Todo.name) private readonly model: Model<TodoDocument>) {}
 
   async create(dto: CreateTodoDto): Promise<TodoResponse> {
     const data: Partial<Todo> = {
@@ -21,7 +19,7 @@ export class MongoTodosRepository implements ITodosRepository {
       description: dto.description,
       status: dto.status ?? TodoStatus.TODO,
       priority: dto.priority ?? 3,
-      dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined
+      dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
     };
     const created = new this.model(data);
     const saved = await created.save();
@@ -43,13 +41,16 @@ export class MongoTodosRepository implements ITodosRepository {
         .limit(limit)
         .lean()
         .exec(),
-      this.model.countDocuments(filter).exec()
+      this.model.countDocuments(filter).exec(),
     ]);
     return { items: items as unknown as TodoResponse[], total, page, limit };
   }
 
   async findOne(id: string): Promise<TodoResponse | null> {
-    const doc: TodoResponse | null = (await this.model.findById(id).lean().exec()) as TodoResponse | null;
+    const doc: TodoResponse | null = (await this.model
+      .findById(id)
+      .lean()
+      .exec()) as TodoResponse | null;
     return doc;
   }
 

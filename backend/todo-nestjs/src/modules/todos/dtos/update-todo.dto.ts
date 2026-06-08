@@ -1,4 +1,13 @@
-import { IsDateString, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, Max, Min } from 'class-validator';
+import {
+  IsDateString,
+  IsEnum,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { TodoStatus } from '../schemas/todo.schema';
 
@@ -33,5 +42,3 @@ export class UpdateTodoDto {
   @IsOptional()
   __v?: number;
 }
-
-

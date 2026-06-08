@@ -9,12 +9,14 @@ export const validationSchema = Joi.object({
     then: Joi.optional(),
     otherwise: Joi.string().required(),
   }),
-  POSTGRESQL_URI: Joi.string().optional(),
+  POSTGRESQL_URI: Joi.string().when('DB_PROFILE', {
+    is: 'postgresql',
+    then: Joi.string().required(),
+    otherwise: Joi.optional(),
+  }),
   REDIS_ENABLED: Joi.string().valid('true', 'false').default('false'),
   REDIS_URL: Joi.string().allow('', null),
   REDIS_HOST: Joi.string().default('127.0.0.1'),
   REDIS_PORT: Joi.number().default(6379),
-  CACHE_TTL_SECONDS: Joi.number().default(30)
+  CACHE_TTL_SECONDS: Joi.number().default(30),
 });
-
-

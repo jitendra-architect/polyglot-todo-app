@@ -4,7 +4,7 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
-  Logger
+  Logger,
 } from '@nestjs/common';
 import { Response } from 'express';
 
@@ -30,7 +30,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       statusCode: status,
       message,
       path,
-      correlationId
+      correlationId,
     };
 
     this.logger.error(`${status} ${message} [${correlationId}] ${path}`, stack);

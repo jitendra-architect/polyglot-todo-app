@@ -1,0 +1,27 @@
+[project]
+name = "todo-fastapi"
+version = "1.0.0"
+description = "Production-grade Todo REST API — FastAPI + MongoDB/PostgreSQL + Redis"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["app", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.basedpyright]
+pythonVersion = "3.12"
+venvPath = "."
+venv = ".venv"
+include = ["app", "tests"]
+typeCheckingMode = "basic"

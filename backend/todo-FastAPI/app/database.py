@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 from beanie import init_beanie
 from motor.motor_asyncio import AsyncIOMotorClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -91,3 +92,23 @@ def get_async_session_factory() -> async_sessionmaker[AsyncSession]:
     if _async_session_factory is None:
         raise RuntimeError("PostgreSQL is not connected. Call connect_db() first.")
     return _async_session_factory
+
+
+async def ping_mongo() -> bool:
+    try:
+        client = get_client()
+        await client.admin.command("ping")
+        return True
+    except Exception:
+        return False
+
+
+async def ping_postgres() -> bool:
+    try:
+        if _engine is None:
+            return False
+        async with _engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        return True
+    except Exception:
+        return False

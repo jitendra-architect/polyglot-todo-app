@@ -1,0 +1,936 @@
+<!doctype html>
+<html class="no-js" lang="">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="x-ua-compatible" content="ie=edge">
+        <title>nest-ssr-todo documentation</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="icon" type="image/x-icon" href="./images/favicon.ico">
+	   <link rel="stylesheet" href="./styles/style.css">
+        <link rel="stylesheet" href="./styles/dark.css">
+    </head>
+    <body>
+          <script>
+               // Blocking script to avoid flickering dark mode
+               // Dark mode toggle button
+               var useDark = window.matchMedia('(prefers-color-scheme: dark)');
+               var darkModeState = useDark.matches;
+               var $darkModeToggleSwitchers = document.querySelectorAll('.dark-mode-switch input');
+               var $darkModeToggles = document.querySelectorAll('.dark-mode-switch');
+               var darkModeStateLocal = localStorage.getItem('compodoc_darkmode-state');
+
+               function checkToggle(check) {
+                    for (var i = 0; i < $darkModeToggleSwitchers.length; i++) {
+                         $darkModeToggleSwitchers[i].checked = check;
+                    }
+               }
+
+               function toggleDarkMode(state) {
+                    if (window.localStorage) {
+                         localStorage.setItem('compodoc_darkmode-state', state);
+                    }
+
+                    checkToggle(state);
+
+                    const hasClass = document.body.classList.contains('dark');
+
+                    if (state) {
+                         for (var i = 0; i < $darkModeToggles.length; i++) {
+                              $darkModeToggles[i].classList.add('dark');
+                         }
+                         if (!hasClass) {
+                              document.body.classList.add('dark');
+                         }
+                    } else {
+                         for (var i = 0; i < $darkModeToggles.length; i++) {
+                              $darkModeToggles[i].classList.remove('dark');
+                         }
+                         if (hasClass) {
+                              document.body.classList.remove('dark');
+                         }
+                    }
+               }
+
+               useDark.addEventListener('change', function (evt) {
+                    toggleDarkMode(evt.matches);
+               });
+               if (darkModeStateLocal) {
+                    darkModeState = darkModeStateLocal === 'true';
+               }
+               toggleDarkMode(darkModeState);
+          </script>
+          <script>
+              // --- Iframe navigation tracking for Template Playground ---
+              function sendCurrentUrlToParent() {
+                  if (window.parent && window.parent !== window) {
+                      window.parent.postMessage({
+                          type: 'compodoc-iframe-navigate',
+                          url: window.location.pathname + window.location.hash
+                      }, '*');
+                  }
+              }
+              window.addEventListener('hashchange', sendCurrentUrlToParent, false);
+              window.addEventListener('popstate', sendCurrentUrlToParent, false);
+              window.addEventListener('DOMContentLoaded', sendCurrentUrlToParent, false);
+          </script>
+
+        <div class="navbar navbar-default navbar-fixed-top d-md-none p-0">
+               <div class="d-flex">
+                    <a href="./" class="navbar-brand">nest-ssr-todo documentation</a>
+                    <button type="button" class="btn btn-default btn-menu ion-ios-menu" id="btn-menu"></button>
+               </div>
+        </div>
+
+        <div class="xs-menu menu" id="mobile-menu">
+                <div id="book-search-input" role="search"><input type="text" placeholder="Type to search"></div>            <compodoc-menu></compodoc-menu>
+        </div>
+
+        <div class="container-fluid main">
+           <div class="row main">
+               <div class="d-none d-md-block menu">
+                   <compodoc-menu mode="normal"></compodoc-menu>
+               </div>
+               <!-- START CONTENT -->
+               <div class="content readme">
+                   <div class="content-data">
+
+
+<h1>NestJS SSR Todo App</h1>
+<p>A production-ready, full-stack Todo application built with <strong>NestJS</strong>, <strong>MongoDB (Mongoose)</strong>, <strong>EJS server-side rendering</strong>, optional <strong>Redis caching</strong>, optional <strong>BullMQ background jobs</strong>, and full <strong>Jest + Supertest</strong> test coverage.</p>
+<hr>
+<h2>Table of Contents</h2>
+<ul>
+<li><a href="#architecture-overview">Architecture Overview</a></li>
+<li><a href="#module-dependency-graph">Module Dependency Graph</a></li>
+<li><a href="#request-lifecycle">Request Lifecycle</a></li>
+<li><a href="#redis-cache-flow">Redis Cache Flow</a></li>
+<li><a href="#tech-stack">Tech Stack</a></li>
+<li><a href="#project-structure">Project Structure</a></li>
+<li><a href="#data-model">Data Model</a></li>
+<li><a href="#api-reference">API Reference</a></li>
+<li><a href="#ssr-routes">SSR Routes</a></li>
+<li><a href="#environment-variables">Environment Variables</a></li>
+<li><a href="#getting-started">Getting Started</a></li>
+<li><a href="#docker-compose">Docker Compose</a></li>
+<li><a href="#testing">Testing</a></li>
+<li><a href="#key-design-decisions">Key Design Decisions</a></li>
+</ul>
+<hr>
+<h2>Architecture Overview</h2>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-none">┌─────────────────────────────────────────────────────────────────────┐
+│                         Client (Browser / API)                      │
+└────────────────────────────┬────────────────────────────────────────┘
+                             │  HTTP
+┌────────────────────────────▼────────────────────────────────────────┐
+│                         NestJS App (Express)                        │
+│                                                                     │
+│  ┌──────────────────┐     ┌─────────────────────────────────────┐   │
+│  │  Global Middleware│     │        Global Pipes &amp; Filters       │   │
+│  │  CorrelationId   │────▶│  ValidationPipe  AllExceptionsFilter │   │
+│  │  (stamps X-Req-Id│     │  (whitelist, transform, forbidExtra) │   │
+│  └──────────────────┘     └─────────────────────────────────────┘   │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │                       Controllers                            │   │
+│  │                                                              │   │
+│  │  ┌──────────────────────┐   ┌──────────────────────────┐    │   │
+│  │  │  TodosApiController  │   │  TodosViewController     │    │   │
+│  │  │  GET  /api/todos     │   │  GET  /todos             │    │   │
+│  │  │  GET  /api/todos/:id │   │  GET  /todos/:id         │    │   │
+│  │  │  POST /api/todos     │   │  GET  /todos/new         │    │   │
+│  │  │  PUT  /api/todos/:id │   │  GET  /todos/:id/edit    │    │   │
+│  │  │  DEL  /api/todos/:id │   │  POST /todos             │    │   │
+│  │  └──────────┬───────────┘   │  POST /todos/:id/update  │    │   │
+│  │             │               │  POST /todos/:id/delete  │    │   │
+│  │             │               └──────────┬───────────────┘    │   │
+│  └─────────────┼──────────────────────────┼────────────────────┘   │
+│                │                          │                         │
+│  ┌─────────────▼──────────────────────────▼────────────────────┐   │
+│  │                       TodosService                           │   │
+│  │  create / findAll / findOne / update / remove               │   │
+│  └──────────┬───────────────────────────────────────┬──────────┘   │
+│             │                                        │              │
+│  ┌──────────▼──────────┐              ┌─────────────▼────────────┐ │
+│  │      MongoDB         │              │     TodoQueueService     │ │
+│  │  (Mongoose ODM)      │              │  (BullMQ — Redis queue)  │ │
+│  │  todos collection    │              │  todo_events queue       │ │
+│  └─────────────────────┘              └──────────────────────────┘ │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │            CacheService  (&#64;Global — single instance)         │   │
+│  │  Redis (ioredis)  ──  or  ──  In-memory Map (shim)           │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘</code></pre></div><hr>
+<h2>Module Dependency Graph</h2>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-none">AppModule (root)
+├── ConfigModule        (isGlobal: true)  ← env vars + Joi validation
+├── MongooseModule      (forRootAsync)    ← MongoDB connection
+├── CacheModule         (&#64;Global)         ← single Redis / in-memory instance
+│     └── CacheService
+├── HealthModule
+│     └── HealthController               ← GET /health
+├── TodosModule
+│     ├── TodosApiController             ← REST API
+│     ├── TodosViewController            ← SSR pages
+│     ├── TodosService
+│     └── JobsModule (imported)
+└── JobsModule
+      └── TodoQueueService               ← BullMQ worker + queue</code></pre></div><hr>
+<h2>Request Lifecycle</h2>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-none">Incoming HTTP Request
+        │
+        ▼
+CorrelationIdMiddleware          ← attaches/generates X-Request-Id on req
+        │
+        ▼
+CorrelationIdInterceptor         ← echoes X-Request-Id back in response header
+        │
+        ▼
+ValidationPipe                   ← validates &amp; transforms DTO (whitelist, transform)
+        │
+        ▼
+  Controller method
+        │
+        ├─── CacheService.get()  ← (list endpoint only) check cache first
+        │
+        ▼
+  TodosService method
+        │
+        ├─── Mongoose Model      ← DB read / write
+        │
+        └─── TodoQueueService    ← (create only) enqueue todo_created job
+        │
+        ▼
+AllExceptionsFilter              ← catches all errors
+        │                           • /api/* → JSON error response
+        │                           • /todos/* → renders error.ejs view
+        ▼
+HTTP Response</code></pre></div><hr>
+<h2>Redis Cache Flow</h2>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-none">GET /api/todos?page=1&amp;limit=10&amp;status=todo
+         │
+         ▼
+   Build cache key:
+   todos:list:page:1:limit:10:status:todo
+         │
+         ▼
+   CacheService.get(key)
+         │
+    ┌────┴────┐
+    │  HIT?   │
+    └────┬────┘
+   YES   │   NO
+    ◄────┘   │
+   return    ▼
+  cached   TodosService.findAll()
+  result       │
+               ▼
+            MongoDB query
+               │
+               ▼
+         CacheService.set(key, result, ttl)
+               │
+               ▼
+            return result
+
+POST / PUT / DELETE /api/todos
+         │
+         ▼
+   TodosService mutation
+         │
+         ▼
+   CacheService.scanDel(&#39;todos:list:*&#39;)
+   (SCAN + DEL all list cache keys)</code></pre></div><hr>
+<h2>Tech Stack</h2>
+<table class="table table-bordered compodoc-table">
+<thead>
+<tr>
+<th>Layer</th>
+<th>Technology</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Framework</td>
+<td><a href="https://nestjs.com">NestJS</a> v10 (Platform: Express)</td>
+</tr>
+<tr>
+<td>Language</td>
+<td>TypeScript 5</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>MongoDB 7 via <a href="https://mongoosejs.com">Mongoose</a> v8</td>
+</tr>
+<tr>
+<td>Templating (SSR)</td>
+<td>EJS + express-ejs-layouts</td>
+</tr>
+<tr>
+<td>Caching</td>
+<td>Redis (ioredis) — optional, falls back to in-memory</td>
+</tr>
+<tr>
+<td>Job Queue</td>
+<td>BullMQ (optional, requires Redis)</td>
+</tr>
+<tr>
+<td>Config / Validation</td>
+<td>@nestjs/config + Joi</td>
+</tr>
+<tr>
+<td>Security</td>
+<td>helmet</td>
+</tr>
+<tr>
+<td>Testing</td>
+<td>Jest + Supertest + mongodb-memory-server</td>
+</tr>
+<tr>
+<td>Containerisation</td>
+<td>Docker (multi-stage) + Docker Compose</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Project Structure</h2>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-none">todo-app/
+├── src/
+│   ├── app.module.ts                         # Root module
+│   ├── main.ts                               # Bootstrap (helmet, EJS, pipes, filters)
+│   │
+│   ├── config/
+│   │   ├── configuration.ts                  # Typed config factory
+│   │   └── validation.ts                     # Joi env-var schema
+│   │
+│   ├── common/
+│   │   ├── filters/
+│   │   │   └── all-exceptions.filter.ts      # Global error handler (JSON + SSR)
+│   │   ├── interceptors/
+│   │   │   └── correlation-id.interceptor.ts # Echo X-Request-Id header
+│   │   ├── middleware/
+│   │   │   └── correlation-id.middleware.ts  # Stamp X-Request-Id on request
+│   │   └── interfaces/
+│   │       └── correlated-request.interface.ts
+│   │
+│   ├── health/
+│   │   ├── health.controller.ts              # GET /health
+│   │   └── health.module.ts
+│   │
+│   ├── jobs/
+│   │   ├── jobs.module.ts
+│   │   └── todo.queue.ts                     # BullMQ queue + worker
+│   │
+│   ├── services/
+│   │   ├── cache.module.ts                   # &#64;Global CacheModule
+│   │   └── cache.service.ts                  # Redis / in-memory cache
+│   │
+│   └── modules/
+│       └── todos/
+│           ├── todos.module.ts
+│           ├── schemas/
+│           │   └── todo.schema.ts            # Mongoose schema + TodoStatus enum
+│           ├── dtos/
+│           │   ├── create-todo.dto.ts
+│           │   ├── update-todo.dto.ts
+│           │   └── list-todos.dto.ts
+│           ├── interfaces/
+│           │   └── todo-response.interface.ts # TodoResponse, TodoListResult, DeleteResult
+│           ├── controllers/
+│           │   ├── todos.api.controller.ts   # REST API
+│           │   └── todos.view.controller.ts  # SSR pages
+│           └── services/
+│               ├── todos.service.ts
+│               └── todos.service.spec.ts
+│
+├── views/
+│   ├── layout.ejs                            # Shared HTML shell
+│   ├── error.ejs                             # Error page
+│   └── todos/
+│       ├── index.ejs                         # Todo list + pagination
+│       ├── detail.ejs                        # Single todo detail
+│       └── form.ejs                          # Create / edit form
+│
+├── public/
+│   └── styles.css
+│
+├── test/
+│   ├── app.e2e-spec.ts                       # E2E: create → list → delete
+│   └── jest-e2e.json
+│
+├── Dockerfile                                # Multi-stage (deps → build → runner)
+├── docker-compose.yml                        # app + mongodb + redis
+├── env.example
+├── jest.config.ts
+├── nest-cli.json
+├── tsconfig.json
+└── tsconfig.build.json</code></pre></div><hr>
+<h2>Data Model</h2>
+<h3>Todo Document</h3>
+<table class="table table-bordered compodoc-table">
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Default</th>
+<th>Constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>_id</code></td>
+<td>ObjectId</td>
+<td>auto</td>
+<td>—</td>
+<td>Mongoose auto</td>
+</tr>
+<tr>
+<td><code>title</code></td>
+<td>string</td>
+<td>yes</td>
+<td>—</td>
+<td>trimmed</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>no</td>
+<td>—</td>
+<td>trimmed</td>
+</tr>
+<tr>
+<td><code>dueDate</code></td>
+<td>Date</td>
+<td>no</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>enum</td>
+<td>yes</td>
+<td><code>todo</code></td>
+<td><code>todo</code> | <code>doing</code> | <code>done</code></td>
+</tr>
+<tr>
+<td><code>priority</code></td>
+<td>number</td>
+<td>yes</td>
+<td><code>3</code></td>
+<td>min 1, max 5</td>
+</tr>
+<tr>
+<td><code>createdAt</code></td>
+<td>Date</td>
+<td>auto</td>
+<td>—</td>
+<td>Mongoose timestamps</td>
+</tr>
+<tr>
+<td><code>updatedAt</code></td>
+<td>Date</td>
+<td>auto</td>
+<td>—</td>
+<td>Mongoose timestamps</td>
+</tr>
+<tr>
+<td><code>__v</code></td>
+<td>number</td>
+<td>auto</td>
+<td><code>0</code></td>
+<td>Optimistic concurrency version</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Index</strong>: <code>{ status: 1, dueDate: 1 }</code> (compound)</p>
+<p><strong>Optimistic Concurrency</strong>: The schema uses <code>optimisticConcurrency: true</code>. When a client edits a document, it submits the current <code>__v</code>. If another write incremented <code>__v</code> in the meantime, Mongoose throws a <code>VersionError</code> which the service catches and re-raises as HTTP 409 Conflict.</p>
+<hr>
+<h2>API Reference</h2>
+<p>Base path: <code>/api/todos</code></p>
+<h3>List Todos</h3>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-none">GET /api/todos</code></pre></div><p><strong>Query Parameters</strong></p>
+<table class="table table-bordered compodoc-table">
+<thead>
+<tr>
+<th>Param</th>
+<th>Type</th>
+<th>Default</th>
+<th>Constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>page</code></td>
+<td>integer</td>
+<td><code>1</code></td>
+<td>min 1</td>
+</tr>
+<tr>
+<td><code>limit</code></td>
+<td>integer</td>
+<td><code>10</code></td>
+<td>min 1, max 100</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td>string</td>
+<td>—</td>
+<td><code>todo</code> | <code>doing</code> | <code>done</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Response <code>200</code></strong></p>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-json">{
+  &quot;items&quot;: [
+    {
+      &quot;_id&quot;: &quot;665f1a2b3c4d5e6f7a8b9c0d&quot;,
+      &quot;title&quot;: &quot;Buy groceries&quot;,
+      &quot;description&quot;: &quot;Milk, eggs, bread&quot;,
+      &quot;dueDate&quot;: &quot;2026-06-10T00:00:00.000Z&quot;,
+      &quot;status&quot;: &quot;todo&quot;,
+      &quot;priority&quot;: 2,
+      &quot;createdAt&quot;: &quot;2026-06-07T06:30:00.000Z&quot;,
+      &quot;updatedAt&quot;: &quot;2026-06-07T06:30:00.000Z&quot;,
+      &quot;__v&quot;: 0
+    }
+  ],
+  &quot;total&quot;: 42,
+  &quot;page&quot;: 1,
+  &quot;limit&quot;: 10
+}</code></pre></div><blockquote>
+<p>List responses are cached in Redis (or in-memory) with a TTL of <code>CACHE_TTL_SECONDS</code> (default 30 s). Cache key: <code>todos:list:page:&lt;p&gt;:limit:&lt;l&gt;:status:&lt;s&gt;</code>.</p>
+</blockquote>
+<hr>
+<h3>Get Single Todo</h3>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-none">GET /api/todos/:id</code></pre></div><p><strong>Response <code>200</code></strong> — single <code>TodoResponse</code> object (same shape as an item above)</p>
+<p><strong>Response <code>404</code></strong></p>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-json">{
+  &quot;statusCode&quot;: 404,
+  &quot;message&quot;: &quot;Todo not found&quot;,
+  &quot;path&quot;: &quot;/api/todos/bad-id&quot;,
+  &quot;correlationId&quot;: &quot;uuid&quot;
+}</code></pre></div><hr>
+<h3>Create Todo</h3>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-none">POST /api/todos
+Content-Type: application/json</code></pre></div><p><strong>Request Body</strong></p>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-json">{
+  &quot;title&quot;: &quot;Buy groceries&quot;,
+  &quot;description&quot;: &quot;Milk, eggs, bread&quot;,
+  &quot;dueDate&quot;: &quot;2026-06-10&quot;,
+  &quot;status&quot;: &quot;todo&quot;,
+  &quot;priority&quot;: 2
+}</code></pre></div><table class="table table-bordered compodoc-table">
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Required</th>
+<th>Constraints</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>title</code></td>
+<td>string</td>
+<td>yes</td>
+<td>non-empty</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>string</td>
+<td>no</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>dueDate</code></td>
+<td>ISO 8601 date string</td>
+<td>no</td>
+<td>—</td>
+</tr>
+<tr>
+<td><code>status</code></td>
+<td><code>todo</code> | <code>doing</code> | <code>done</code></td>
+<td>no</td>
+<td>default <code>todo</code></td>
+</tr>
+<tr>
+<td><code>priority</code></td>
+<td>integer</td>
+<td>no</td>
+<td>1–5, default 3</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Response <code>201</code></strong> — created <code>TodoResponse</code></p>
+<p>Triggers: cache invalidation (<code>todos:list:*</code>) + BullMQ <code>todo_created</code> job.</p>
+<hr>
+<h3>Update Todo</h3>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-none">PUT /api/todos/:id
+Content-Type: application/json</code></pre></div><p>All fields are optional. Send <code>__v</code> to enable optimistic concurrency checking.</p>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-json">{
+  &quot;title&quot;: &quot;Buy organic groceries&quot;,
+  &quot;status&quot;: &quot;doing&quot;,
+  &quot;priority&quot;: 1,
+  &quot;__v&quot;: 0
+}</code></pre></div><p><strong>Response <code>200</code></strong> — updated <code>TodoResponse</code></p>
+<p><strong>Response <code>409</code></strong> — version conflict (another writer updated the document first)</p>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-json">{ &quot;statusCode&quot;: 409, &quot;message&quot;: &quot;Version conflict. Please reload and try again.&quot; }</code></pre></div><p>Triggers: cache invalidation (<code>todos:list:*</code>).</p>
+<hr>
+<h3>Delete Todo</h3>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-none">DELETE /api/todos/:id</code></pre></div><p><strong>Response <code>200</code></strong></p>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-json">{ &quot;status&quot;: &quot;ok&quot; }</code></pre></div><p>Triggers: cache invalidation (<code>todos:list:*</code>).</p>
+<hr>
+<h3>Health Check</h3>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-none">GET /health</code></pre></div><p><strong>Response <code>200</code></strong></p>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-json">{
+  &quot;status&quot;: &quot;ok&quot;,
+  &quot;mongodb&quot;: &quot;up&quot;,
+  &quot;redis&quot;: &quot;up&quot;,
+  &quot;uptime&quot;: 142.5
+}</code></pre></div><p><code>redis</code> is <code>&quot;disabled&quot;</code> when <code>REDIS_ENABLED=false</code>.</p>
+<hr>
+<h2>SSR Routes</h2>
+<p>All SSR routes render EJS templates wrapped in <code>views/layout.ejs</code>.</p>
+<table class="table table-bordered compodoc-table">
+<thead>
+<tr>
+<th>Method</th>
+<th>Path</th>
+<th>Template</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/</code></td>
+<td>—</td>
+<td>Redirects to <code>/todos</code></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/todos</code></td>
+<td><code>todos/index</code></td>
+<td>Paginated list with status filter</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/todos/new</code></td>
+<td><code>todos/form</code></td>
+<td>Create form</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/todos/:id</code></td>
+<td><code>todos/detail</code></td>
+<td>Todo detail view</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/todos/:id/edit</code></td>
+<td><code>todos/form</code></td>
+<td>Edit form (pre-filled, includes <code>__v</code>)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/todos</code></td>
+<td>—</td>
+<td>Submit create → redirect to detail</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/todos/:id/update</code></td>
+<td>—</td>
+<td>Submit edit → redirect to detail</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/todos/:id/delete</code></td>
+<td>—</td>
+<td>Submit delete → redirect to list</td>
+</tr>
+</tbody>
+</table>
+<blockquote>
+<p>HTML forms use <code>POST</code> for all mutations (browser compatibility). The <code>__v</code> hidden field on the edit form enables optimistic concurrency for SSR edits.</p>
+</blockquote>
+<hr>
+<h2>Environment Variables</h2>
+<p>Copy <code>env.example</code> to <code>.env</code>:</p>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-env">NODE_ENV=development
+PORT=3000
+
+# MongoDB
+MONGODB_URI=mongodb://localhost:27017/todos   # required
+
+# Redis (optional — set REDIS_ENABLED=true to activate)
+REDIS_ENABLED=false
+REDIS_HOST=127.0.0.1
+REDIS_PORT=6379
+REDIS_URL=                                    # overrides HOST+PORT when set
+
+# Cache
+CACHE_TTL_SECONDS=30</code></pre></div><table class="table table-bordered compodoc-table">
+<thead>
+<tr>
+<th>Variable</th>
+<th>Required</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NODE_ENV</code></td>
+<td>no</td>
+<td><code>development</code></td>
+<td><code>development</code> | <code>test</code> | <code>production</code></td>
+</tr>
+<tr>
+<td><code>PORT</code></td>
+<td>no</td>
+<td><code>3000</code></td>
+<td>HTTP listen port</td>
+</tr>
+<tr>
+<td><code>MONGODB_URI</code></td>
+<td><strong>yes</strong></td>
+<td>—</td>
+<td>Full MongoDB connection string</td>
+</tr>
+<tr>
+<td><code>REDIS_ENABLED</code></td>
+<td>no</td>
+<td><code>false</code></td>
+<td>Enable Redis caching and BullMQ jobs</td>
+</tr>
+<tr>
+<td><code>REDIS_URL</code></td>
+<td>no</td>
+<td>—</td>
+<td>Full Redis URL (overrides HOST+PORT)</td>
+</tr>
+<tr>
+<td><code>REDIS_HOST</code></td>
+<td>no</td>
+<td><code>127.0.0.1</code></td>
+<td>Redis hostname</td>
+</tr>
+<tr>
+<td><code>REDIS_PORT</code></td>
+<td>no</td>
+<td><code>6379</code></td>
+<td>Redis port</td>
+</tr>
+<tr>
+<td><code>CACHE_TTL_SECONDS</code></td>
+<td>no</td>
+<td><code>30</code></td>
+<td>Cache entry TTL in seconds</td>
+</tr>
+</tbody>
+</table>
+<p>Env vars are validated at startup via Joi. The app refuses to boot if <code>MONGODB_URI</code> is missing or any value is invalid.</p>
+<hr>
+<h2>Getting Started</h2>
+<h3>Prerequisites</h3>
+<ul>
+<li>Node.js 20+</li>
+<li>MongoDB 7 (local or remote)</li>
+<li>Redis 7 (optional)</li>
+</ul>
+<h3>Local Development</h3>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-bash"># 1. Install dependencies
+npm ci
+
+# 2. Configure environment
+cp env.example .env
+# edit .env — set MONGODB_URI at minimum
+
+# 3. Start in watch mode
+npm run start:dev</code></pre></div><p>App available at <code>http://localhost:3000</code>.</p>
+<h3>Production Build</h3>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-bash">npm run build
+npm start</code></pre></div><h3>Available Scripts</h3>
+<table class="table table-bordered compodoc-table">
+<thead>
+<tr>
+<th>Script</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>npm run start:dev</code></td>
+<td>Start with hot-reload (ts-node watch)</td>
+</tr>
+<tr>
+<td><code>npm run build</code></td>
+<td>Compile TypeScript to <code>dist/</code></td>
+</tr>
+<tr>
+<td><code>npm start</code></td>
+<td>Run compiled production build</td>
+</tr>
+<tr>
+<td><code>npm run lint</code></td>
+<td>ESLint check</td>
+</tr>
+<tr>
+<td><code>npm run format</code></td>
+<td>Prettier format all sources</td>
+</tr>
+<tr>
+<td><code>npm test</code></td>
+<td>Unit tests</td>
+</tr>
+<tr>
+<td><code>npm run test:cov</code></td>
+<td>Unit tests with coverage report</td>
+</tr>
+<tr>
+<td><code>npm run test:e2e</code></td>
+<td>End-to-end tests</td>
+</tr>
+</tbody>
+</table>
+<hr>
+<h2>Docker Compose</h2>
+<p>Starts the app, MongoDB, and Redis as a single stack:</p>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-bash">docker-compose up --build</code></pre></div><b>Example :</b><div><pre class="line-numbers"><code class="language-none">Services:
+  app       → http://localhost:3000  (NestJS, NODE_ENV=development, REDIS_ENABLED=true)
+  mongodb   → localhost:27017        (mongo:7, persisted volume: mongo-data)
+  redis     → localhost:6379         (redis:7-alpine, AOF persistence)</code></pre></div><p>To run with Redis disabled:</p>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-bash">REDIS_ENABLED=false docker-compose up --build</code></pre></div><p>The app&#39;s <strong>Dockerfile</strong> is a three-stage build:</p>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-none">Stage 1 — deps     : npm ci (install only)
+Stage 2 — builder  : copy deps + source, npm run build
+Stage 3 — runner   : copy dist/ + public/ + views/, node dist/main.js</code></pre></div><p>Final image is minimal (<code>node:20-alpine</code>) — no source, no devDependencies.</p>
+<hr>
+<h2>Testing</h2>
+<h3>Unit Tests</h3>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-bash">npm test</code></pre></div><p><code>src/modules/todos/services/todos.service.spec.ts</code> — tests <code>TodosService</code> against a real in-memory MongoDB (mongodb-memory-server):</p>
+<ul>
+<li><code>create</code> — persists a todo and returns the full response shape</li>
+<li><code>findAll</code> — correct total and pagination</li>
+</ul>
+<h3>End-to-End Tests</h3>
+<b>Example :</b><div><pre class="line-numbers"><code class="language-bash">npm run test:e2e</code></pre></div><p><code>test/app.e2e-spec.ts</code> — full HTTP flow via Supertest against an in-memory MongoDB:</p>
+<ol>
+<li><code>POST /api/todos</code> → 201, verifies response body</li>
+<li><code>GET /api/todos</code> → 200, verifies created item appears in list</li>
+<li><code>DELETE /api/todos/:id</code> → 200</li>
+<li><code>GET /api/todos</code> → 200, verifies item is gone</li>
+</ol>
+<p>Both test suites use <code>REDIS_ENABLED=false</code> — no Redis required to run tests.</p>
+<hr>
+<h2>Key Design Decisions</h2>
+<h3><code>@Global()</code> CacheModule</h3>
+<p><code>CacheService</code> is registered once in a <code>@Global()</code> <code>CacheModule</code> imported by <code>AppModule</code>. This ensures a <strong>single Redis connection</strong> (or single in-memory Map) across the entire application. Previously, registering <code>CacheService</code> as a provider in multiple modules created duplicate connections.</p>
+<h3>Why EJS for SSR?</h3>
+<p>EJS is a simple, zero-client-side-framework templating engine with seamless Express/NestJS integration, minimal learning curve, and no build step. Ideal for server-rendered forms where React/Vue would be over-engineering.</p>
+<h3>Optimistic Concurrency</h3>
+<p>Mongoose&#39;s <code>optimisticConcurrency: true</code> uses <code>__v</code> as a version counter. On <code>save()</code>, Mongoose adds <code>__v: &lt;current&gt;</code> to the WHERE clause. If a concurrent update already incremented <code>__v</code>, the save matches zero documents and throws a <code>VersionError</code>. The service catches <code>VersionError</code> and re-raises as HTTP 409 Conflict. The SSR edit form includes a hidden <code>__v</code> field so concurrent browser edits are also protected.</p>
+<h3>Cache Invalidation Strategy</h3>
+<p>On any mutation (create / update / delete) the app calls <code>CacheService.scanDel(&#39;todos:list:*&#39;)</code>. With Redis, this issues a non-blocking SCAN + DEL. With the in-memory shim, it iterates the Map. This is a <strong>cache-aside with write-through invalidation</strong> pattern: reads populate the cache, writes invalidate all affected keys.</p>
+<h3>Correlation IDs</h3>
+<p>Every request is stamped with a UUID in <code>CorrelationIdMiddleware</code>. If the client already sends <code>X-Request-Id</code>, that value is reused (pass-through). The interceptor echoes the ID back in the response header. Every log line and error payload carries the same ID for end-to-end traceability.</p>
+<h3>BullMQ Jobs</h3>
+<p><code>TodoQueueService</code> is a no-op when Redis is disabled (<code>REDIS_ENABLED=false</code>) — the <code>enqueueTodoCreated</code> method returns immediately if the queue was never initialised. This means the job system adds zero overhead and zero failure risk in environments without Redis.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                   </div><div class="search-results">
+    <div class="has-results">
+        <h1 class="search-results-title"><span class='search-results-count'></span> results matching "<span class='search-query'></span>"</h1>
+        <ul class="search-results-list"></ul>
+    </div>
+    <div class="no-results">
+        <h1 class="search-results-title">No results matching "<span class='search-query'></span>"</h1>
+    </div>
+</div>
+</div>
+               <!-- END CONTENT -->
+           </div>
+       </div>
+
+          <label class="dark-mode-switch">
+               <input type="checkbox">
+               <span class="slider">
+                    <svg class="slider-icon" viewBox="0 0 24 24" fill="none" height="20" stroke="#000" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" width="20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"></path>
+                    </svg>
+               </span>
+          </label>
+
+       <script>
+            var COMPODOC_CURRENT_PAGE_DEPTH = 0;
+            var COMPODOC_CURRENT_PAGE_CONTEXT = 'readme';
+            var COMPODOC_CURRENT_PAGE_URL = 'index.html';
+            var MAX_SEARCH_RESULTS = 15;
+       </script>
+
+       <script>
+               $darkModeToggleSwitchers = document.querySelectorAll('.dark-mode-switch input');
+               checkToggle(darkModeState);
+               if ($darkModeToggleSwitchers.length > 0) {
+                    for (var i = 0; i < $darkModeToggleSwitchers.length; i++) {
+                         $darkModeToggleSwitchers[i].addEventListener('change', function (event) {
+                              darkModeState = !darkModeState;
+                              toggleDarkMode(darkModeState);
+                         });
+                    }
+               }
+          </script>
+
+       <script src="./js/libs/custom-elements.min.js"></script>
+       <script src="./js/libs/lit-html.js"></script>
+
+       <script src="./js/menu-wc.js" defer></script>
+       <script nomodule src="./js/menu-wc_es5.js" defer></script>
+
+       <script src="./js/libs/bootstrap-native.js"></script>
+
+       <script src="./js/libs/es6-shim.min.js"></script>
+       <script src="./js/libs/EventDispatcher.js"></script>
+       <script src="./js/libs/promise.min.js"></script>
+
+       <script src="./js/compodoc.js"></script>
+
+       <script src="./js/tabs.js"></script>
+       <script src="./js/menu.js"></script>
+       <script src="./js/libs/clipboard.min.js"></script>
+       <script src="./js/libs/prism.js"></script>
+       <script src="./js/sourceCode.js"></script>
+          <script src="./js/search/search.js"></script>
+          <script src="./js/search/lunr.min.js"></script>
+          <script src="./js/search/search-lunr.js"></script>
+          <script src="./js/search/search_index.js"></script>
+       <script src="./js/lazy-load-graphs.js"></script>
+
+
+    </body>
+</html>

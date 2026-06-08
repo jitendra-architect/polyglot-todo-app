@@ -6,13 +6,13 @@ export type TodoDocument = HydratedDocument<Todo>;
 export enum TodoStatus {
   TODO = 'todo',
   DOING = 'doing',
-  DONE = 'done'
+  DONE = 'done',
 }
 
 @Schema({
   timestamps: true,
   versionKey: '__v',
-  optimisticConcurrency: true
+  optimisticConcurrency: true,
 })
 export class Todo {
   @Prop({ required: true, trim: true })
@@ -33,5 +33,3 @@ export class Todo {
 
 export const TodoSchema = SchemaFactory.createForClass(Todo);
 TodoSchema.index({ status: 1, dueDate: 1 });
-
-

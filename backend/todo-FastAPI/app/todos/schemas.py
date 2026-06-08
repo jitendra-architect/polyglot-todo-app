@@ -8,7 +8,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_valid
 
 from app.todos.models import TodoStatus
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _object_id_to_str(v: object) -> str:

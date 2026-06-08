@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Annotated
+
 from fastapi import APIRouter, Depends, Query, status
 
 from app.cache.service import CacheService, get_cache
@@ -12,20 +14,22 @@ from app.todos.schemas import (
     UpdateTodoSchema,
 )
 from app.todos.service import TodoService, get_todo_service
+from app.todos.models import TodoStatus
 
 router = APIRouter(prefix="/api/todos", tags=["todos"])
 
+TodoServiceDep = Annotated[TodoService, Depends(get_todo_service)]
+CacheDep = Annotated[CacheService, Depends(get_cache)]
 
-@router.get("", response_model=TodoListResponse, status_code=status.HTTP_200_OK)
+
+@router.get("", status_code=status.HTTP_200_OK)
 async def list_todos(
-    page: int = Query(default=1, ge=1),
-    limit: int = Query(default=10, ge=1, le=100),
-    status_filter: str | None = Query(default=None, alias="status"),
-    service: TodoService = Depends(get_todo_service),
-    cache: CacheService = Depends(get_cache),
+    service: TodoServiceDep,
+    cache: CacheDep,
+    page: Annotated[int, Query(ge=1)] = 1,
+    limit: Annotated[int, Query(ge=1, le=100)] = 10,
+    status_filter: Annotated[str | None, Query(alias="status")] = None,
 ) -> TodoListResponse:
-    from app.todos.schemas import ListTodosQuerySchema  # noqa: PLC0415
-    from app.todos.models import TodoStatus  # noqa: PLC0415
 
     todo_status = TodoStatus(status_filter) if status_filter else None
     query = ListTodosQuerySchema(page=page, limit=limit, status=todo_status)
@@ -40,42 +44,42 @@ async def list_todos(
     return result
 
 
-@router.get("/{todo_id}", response_model=TodoResponse, status_code=status.HTTP_200_OK)
+@router.get("/{todo_id}", status_code=status.HTTP_200_OK)
 async def get_todo(
     todo_id: str,
-    service: TodoService = Depends(get_todo_service),
+    service: TodoServiceDep,
 ) -> TodoResponse:
     return await service.find_one(todo_id)
 
 
-@router.post("", response_model=TodoResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", status_code=status.HTTP_201_CREATED)
 async def create_todo(
     dto: CreateTodoSchema,
-    service: TodoService = Depends(get_todo_service),
-    cache: CacheService = Depends(get_cache),
+    service: TodoServiceDep,
+    cache: CacheDep,
 ) -> TodoResponse:
     item = await service.create(dto)
     await cache.scan_del("todos:list:*")
     return item
 
 
-@router.put("/{todo_id}", response_model=TodoResponse, status_code=status.HTTP_200_OK)
+@router.put("/{todo_id}", status_code=status.HTTP_200_OK)
 async def update_todo(
     todo_id: str,
     dto: UpdateTodoSchema,
-    service: TodoService = Depends(get_todo_service),
-    cache: CacheService = Depends(get_cache),
+    service: TodoServiceDep,
+    cache: CacheDep,
 ) -> TodoResponse:
     item = await service.update(todo_id, dto)
     await cache.scan_del("todos:list:*")
     return item
 
 
-@router.delete("/{todo_id}", response_model=DeleteResponse, status_code=status.HTTP_200_OK)
+@router.delete("/{todo_id}", status_code=status.HTTP_200_OK)
 async def delete_todo(
     todo_id: str,
-    service: TodoService = Depends(get_todo_service),
-    cache: CacheService = Depends(get_cache),
+    service: TodoServiceDep,
+    cache: CacheDep,
 ) -> DeleteResponse:
     await service.remove(todo_id)
     await cache.scan_del("todos:list:*")

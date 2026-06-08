@@ -5,6 +5,7 @@ import { CacheService } from './services/cache.service';
 import { TodoQueueService } from './services/todo-queue.service';
 import { ITodosRepository } from './modules/todos/repository/todos-repository.interface';
 import { TodosService } from './modules/todos/service/todos.service';
+import { TodosController } from './modules/todos/controllers/todos.controller';
 import { makeTodosRouter } from './modules/todos/router/todos.router';
 import { makeHealthRouter } from './health/health.router';
 import { correlationIdMiddleware } from './common/middleware/correlation-id.middleware';
@@ -31,10 +32,11 @@ export function createApp(cfg: Config, todosRepo: ITodosRepository): {
   const cache = new CacheService(cfg);
   const queue = new TodoQueueService(cfg);
   const todosService = new TodosService(todosRepo, queue);
+  const todosController = new TodosController(todosService, cache);
 
   // ── Routes ───────────────────────────────────────────────────────────────────
   app.use('/health', makeHealthRouter(cache));
-  app.use('/api/todos', makeTodosRouter(todosService, cache));
+  app.use('/api/todos', makeTodosRouter(todosController));
 
   // 404 fallback
   app.use((_req: Request, res: Response) => {

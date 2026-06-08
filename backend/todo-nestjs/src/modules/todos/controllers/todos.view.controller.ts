@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  Render,
-  Res
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Render, Res } from '@nestjs/common';
 import { Response } from 'express';
 
 import { TodosService } from '../services/todos.service';
@@ -36,7 +27,7 @@ export class TodosViewController {
       limit: data.limit,
       total: data.total,
       pages,
-      status: query.status ?? ''
+      status: query.status ?? '',
     };
   }
 
@@ -79,5 +70,3 @@ export class TodosViewController {
     return res.redirect('/todos');
   }
 }
-
-

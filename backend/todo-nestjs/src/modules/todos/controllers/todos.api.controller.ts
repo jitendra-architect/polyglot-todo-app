@@ -1,13 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Post,
-  Put,
-  Query
-} from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 
 import { TodosService } from '../services/todos.service';
 import { CreateTodoDto } from '../dtos/create-todo.dto';
@@ -16,9 +7,21 @@ import { ListTodosQueryDto } from '../dtos/list-todos.dto';
 import { CacheService } from '../../../services/cache.service';
 import { DeleteResult, TodoListResult, TodoResponse } from '../interfaces/todo-response.interface';
 
+/**
+ * Todos API Controller
+ * @description Controller for the Todos API
+ * @category Controllers
+ * @subcategory Todos
+ * @module TodosApiController
+ * @author John Doe
+ * @version 1.0.0
+ */
 @Controller('api/todos')
 export class TodosApiController {
-  constructor(private readonly todos: TodosService, private readonly cache: CacheService) {}
+  constructor(
+    private readonly todos: TodosService,
+    private readonly cache: CacheService,
+  ) {}
 
   @Get()
   async list(@Query() query: ListTodosQueryDto): Promise<TodoListResult> {

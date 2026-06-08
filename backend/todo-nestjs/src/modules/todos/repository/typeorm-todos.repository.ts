@@ -13,9 +13,7 @@ import { ITodosRepository } from './todos-repository.interface';
 
 @Injectable()
 export class TypeOrmTodosRepository implements ITodosRepository {
-  constructor(
-    @InjectRepository(TodoEntity) private readonly repo: Repository<TodoEntity>
-  ) {}
+  constructor(@InjectRepository(TodoEntity) private readonly repo: Repository<TodoEntity>) {}
 
   private toResponse(entity: TodoEntity): TodoResponse {
     return {
@@ -27,7 +25,7 @@ export class TypeOrmTodosRepository implements ITodosRepository {
       priority: entity.priority,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
-      __v: entity.__v
+      __v: entity.__v,
     };
   }
 
@@ -37,7 +35,7 @@ export class TypeOrmTodosRepository implements ITodosRepository {
       description: dto.description,
       status: dto.status ?? TodoStatus.TODO,
       priority: dto.priority ?? 3,
-      dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined
+      dueDate: dto.dueDate ? new Date(dto.dueDate) : undefined,
     });
     const saved = await this.repo.save(entity);
     return this.toResponse(saved);
@@ -54,9 +52,9 @@ export class TypeOrmTodosRepository implements ITodosRepository {
       where,
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
-      take: limit
+      take: limit,
     });
-    return { items: items.map(e => this.toResponse(e)), total, page, limit };
+    return { items: items.map((e: TodoEntity) => this.toResponse(e)), total, page, limit };
   }
 
   async findOne(id: string): Promise<TodoResponse | null> {

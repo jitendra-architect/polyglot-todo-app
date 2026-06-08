@@ -20,5 +20,3 @@ export class ListTodosQueryDto {
   @IsOptional()
   status?: TodoStatus;
 }
-
-

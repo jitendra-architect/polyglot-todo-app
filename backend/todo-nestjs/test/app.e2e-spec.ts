@@ -13,12 +13,13 @@ describe('App (e2e)', () => {
   let uri: string;
 
   beforeAll(async () => {
+    process.env.DB_PROFILE = 'mongodb';
     process.env.REDIS_ENABLED = 'false';
     mongod = await MongoMemoryServer.create();
     uri = mongod.getUri();
     process.env.MONGODB_URI = uri;
     const moduleFixture: TestingModule = await Test.createTestingModule({
-      imports: [AppModule]
+      imports: [AppModule],
     }).compile();
 
     app = moduleFixture.createNestApplication();
@@ -26,8 +27,8 @@ describe('App (e2e)', () => {
       new ValidationPipe({
         whitelist: true,
         transform: true,
-        forbidNonWhitelisted: true
-      })
+        forbidNonWhitelisted: true,
+      }),
     );
     app.useGlobalFilters(new AllExceptionsFilter());
     app.useGlobalInterceptors(new CorrelationIdInterceptor());
@@ -58,5 +59,3 @@ describe('App (e2e)', () => {
     expect(listRes2.body.items.some((t: any) => t._id === id)).toBe(false);
   });
 });
-
-

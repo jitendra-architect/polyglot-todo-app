@@ -8,6 +8,8 @@ import { Todo, TodoSchema } from '../schemas/todo.schema';
 import { JobsModule } from '../../../jobs/jobs.module';
 import { CreateTodoDto } from '../dtos/create-todo.dto';
 import { TodoStatus } from '../schemas/todo.schema';
+import { MongoTodosRepository } from '../repository/mongo-todos.repository';
+import { TODOS_REPOSITORY } from '../repository/todos-repository.interface';
 
 describe('TodosService', () => {
   let service: TodosService;
@@ -15,6 +17,7 @@ describe('TodosService', () => {
   let moduleRef: TestingModule;
 
   beforeAll(async () => {
+    process.env.DB_PROFILE = 'mongodb';
     process.env.REDIS_ENABLED = 'false';
     mongod = await MongoMemoryServer.create();
     const uri = mongod.getUri();
@@ -24,9 +27,9 @@ describe('TodosService', () => {
         ConfigModule.forRoot({ isGlobal: true }),
         MongooseModule.forRoot(uri),
         MongooseModule.forFeature([{ name: Todo.name, schema: TodoSchema }]),
-        JobsModule
+        JobsModule,
       ],
-      providers: [TodosService]
+      providers: [TodosService, { provide: TODOS_REPOSITORY, useClass: MongoTodosRepository }],
     }).compile();
 
     service = moduleRef.get(TodosService);

@@ -6,15 +6,13 @@ const config: Config = {
   testEnvironment: 'node',
   testRegex: '.*\\.spec\\.ts$',
   transform: {
-    '^.+\\.(t|j)s$': 'ts-jest'
+    '^.+\\.(t|j)s$': 'ts-jest',
   },
   collectCoverageFrom: ['src/**/*.(t|j)s'],
   coverageDirectory: './coverage',
   moduleNameMapper: {
-    '^(.*)\\.js$': '$1'
-  }
+    '^(.*)\\.js$': '$1',
+  },
 };
 
 export default config;
-
-
