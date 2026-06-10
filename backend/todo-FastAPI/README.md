@@ -1,19 +1,25 @@
-# FastAPI Todo App
+# todo-FastAPI — Architectural Design Document
 
-A production-ready Todo REST API built with **FastAPI**, **MongoDB (Beanie/Motor)** or **PostgreSQL (SQLAlchemy/asyncpg)**, optional **Redis caching**, optional **ARQ background jobs**, and full **pytest-asyncio** test coverage.
+**Framework:** FastAPI 0.115+ · Python 3.12  
+**Default port:** `8000`  
+**Part of:** [polyglot-todo-app](../../README.md)
 
-This is the Python/FastAPI equivalent of the companion NestJS SSR Todo app — same features, same production standards.
+> **Drop-in backend alternative.** Deploy this **instead of** NestJS, Express, or Spring Boot — not alongside them. Connect to **one** database via `DB_PROFILE` (MongoDB *or* PostgreSQL). Ships auto-generated OpenAPI docs at `/docs`.
+
+A production-ready Todo REST API — async-first Python, optional Redis caching, optional ARQ background jobs, full pytest-asyncio coverage.
 
 ---
 
 ## Table of Contents
 
+- [Position in Monorepo](#position-in-monorepo)
 - [Architecture Overview](#architecture-overview)
 - [Module Structure](#module-structure)
 - [Request Lifecycle](#request-lifecycle)
 - [Redis Cache Flow](#redis-cache-flow)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
+- [Database Profile](#database-profile)
 - [Data Model](#data-model)
 - [API Reference](#api-reference)
 - [Environment Variables](#environment-variables)
@@ -21,6 +27,17 @@ This is the Python/FastAPI equivalent of the companion NestJS SSR Todo app — s
 - [Docker Compose](#docker-compose)
 - [Testing](#testing)
 - [Key Design Decisions](#key-design-decisions)
+
+---
+
+## Position in Monorepo
+
+| Attribute | Value |
+|---|---|
+| Role | Python/async implementation of the unified Todo API |
+| Clients | React Web, React Native — set proxy / `API_BASE_URL` to `:8000` |
+| Persistence | `DB_PROFILE=mongodb` (Beanie) **or** `postgresql` (SQLAlchemy) |
+| Unique | Auto-generated Swagger UI (`/docs`) and ReDoc (`/redoc`) |
 
 ---
 
@@ -60,9 +77,8 @@ This is the Python/FastAPI equivalent of the companion NestJS SSR Todo app — s
 │  └──────────┬────────────────────────────────────┬─────────────┘    │
 │             │                                    │                   │
 │  ┌──────────▼──────────┐           ┌─────────────▼───────────────┐  │
-│  │     MongoDB          │           │     ARQ Job Queue           │  │
-│  │  (Beanie + Motor)    │           │  (todo_created task)        │  │
-│  │  todos collection    │           │  separate worker process    │  │
+│  │  ONE database        │           │     ARQ Job Queue           │  │
+│  │  MongoDB or PG       │           │  (todo_created task)        │  │
 │  └─────────────────────┘           └─────────────────────────────┘  │
 │                                                                      │
 │  ┌───────────────────────────────────────────────────────────────┐   │
@@ -243,6 +259,41 @@ todo-FastAPI/
 ├── requirements-dev.txt           # Test + lint dependencies
 ├── env.example
 └── .dockerignore
+```
+
+---
+
+## Database Profile
+
+Exactly **one** database is active per deployment.
+
+```
+DB_PROFILE=mongodb      →  Beanie + Motor        →  mongo_repository.py
+DB_PROFILE=postgresql   →  SQLAlchemy + asyncpg  →  postgres_repository.py
+```
+
+| Rule | Detail |
+|---|---|
+| **Pick one** | `DB_PROFILE=mongodb` or `DB_PROFILE=postgresql` — never both |
+| **URI** | `MONGODB_URI` or `POSTGRESQL_URI` — only the active profile's URI is required |
+| **Switching** | Restart with new profile; data does not auto-migrate |
+| **Repository** | `make_todo_service()` wires the correct repository at startup |
+
+```bash
+# MongoDB (default)
+DB_PROFILE=mongodb
+MONGODB_URI=mongodb://localhost:27017/todos
+
+# PostgreSQL
+DB_PROFILE=postgresql
+POSTGRESQL_URI=postgresql+asyncpg://postgres:postgres@localhost:5432/todos
+```
+
+Docker Compose uses profiles — start **one**:
+
+```bash
+docker compose --profile mongodb up --build
+DB_PROFILE=postgresql docker compose --profile postgresql up --build
 ```
 
 ---
@@ -453,7 +504,7 @@ Settings are validated at startup via Pydantic `BaseSettings`. The app refuses t
 ### Prerequisites
 
 - Python 3.12+
-- MongoDB 7 (local or remote)
+- MongoDB 7+ **or** PostgreSQL 17+ (one, matching `DB_PROFILE`)
 - Redis 7 (optional)
 
 ### Local Development
@@ -583,3 +634,16 @@ When `REDIS_ENABLED=false`, the service uses a `dict`-based in-memory store with
 ### Correlation IDs
 
 `CorrelationIdMiddleware` stamps every request with a UUID (or passes through a client-supplied `X-Request-Id`). The ID is stored on `request.state.correlation_id` and echoed back in the response header. All exception handlers include it in the error JSON body for end-to-end traceability.
+
+### API field naming note
+
+FastAPI/Pydantic uses **snake_case** in JSON (`due_date`, `revision`, `created_at`) whereas Node/Java backends use **camelCase** (`dueDate`, `__v`, `createdAt`). Frontends targeting FastAPI should map field names accordingly, or add serialization aliases in `schemas.py` for full contract parity.
+
+---
+
+<p align="center">
+  <a href="../../README.md">← Polyglot Todo App (root)</a> ·
+  <a href="../todo-nestjs/README.md">NestJS</a> ·
+  <a href="../todo-express/README.md">Express</a> ·
+  <a href="../todo-spring/README.md">Spring Boot</a>
+</p>

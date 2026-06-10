@@ -1,17 +1,25 @@
-# NestJS SSR Todo App
+# todo-nestjs — Architectural Design Document
 
-A production-ready, full-stack Todo application built with **NestJS**, **MongoDB (Mongoose)**, **EJS server-side rendering**, optional **Redis caching**, optional **BullMQ background jobs**, and full **Jest + Supertest** test coverage.
+**Framework:** NestJS 11 · TypeScript 5  
+**Default port:** `3000`  
+**Part of:** [polyglot-todo-app](../../README.md)
+
+> **Drop-in backend alternative.** Deploy this **instead of** Express, FastAPI, or Spring Boot — not alongside them. Connect to **one** database via `DB_PROFILE` (MongoDB *or* PostgreSQL). Unique among the four backends: includes **EJS server-side rendering** at `/todos/*`.
+
+A production-ready, full-stack Todo application — REST API + SSR pages, optional Redis caching, optional BullMQ jobs, Jest + Supertest coverage.
 
 ---
 
 ## Table of Contents
 
+- [Position in Monorepo](#position-in-monorepo)
 - [Architecture Overview](#architecture-overview)
 - [Module Dependency Graph](#module-dependency-graph)
 - [Request Lifecycle](#request-lifecycle)
 - [Redis Cache Flow](#redis-cache-flow)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
+- [Database Profile](#database-profile)
 - [Data Model](#data-model)
 - [API Reference](#api-reference)
 - [SSR Routes](#ssr-routes)
@@ -20,6 +28,17 @@ A production-ready, full-stack Todo application built with **NestJS**, **MongoDB
 - [Docker Compose](#docker-compose)
 - [Testing](#testing)
 - [Key Design Decisions](#key-design-decisions)
+
+---
+
+## Position in Monorepo
+
+| Attribute | Value |
+|---|---|
+| Role | Reference implementation — REST API **and** SSR |
+| Clients | React Web (`/api` proxy → `:3000`), React Native, browser SSR |
+| Persistence | `DB_PROFILE=mongodb` (Mongoose) **or** `postgresql` (TypeORM) |
+| Switching | Stop other backends; point clients at port `3000` |
 
 ---
 
@@ -60,9 +79,8 @@ A production-ready, full-stack Todo application built with **NestJS**, **MongoDB
 │  └──────────┬───────────────────────────────────────┬──────────┘   │
 │             │                                        │              │
 │  ┌──────────▼──────────┐              ┌─────────────▼────────────┐ │
-│  │      MongoDB         │              │     TodoQueueService     │ │
-│  │  (Mongoose ODM)      │              │  (BullMQ — Redis queue)  │ │
-│  │  todos collection    │              │  todo_events queue       │ │
+│  │  ONE database        │              │     TodoQueueService     │ │
+│  │  MongoDB or PG       │              │  (BullMQ — Redis queue)  │ │
 │  └─────────────────────┘              └──────────────────────────┘ │
 │                                                                     │
 │  ┌──────────────────────────────────────────────────────────────┐   │
@@ -176,9 +194,9 @@ POST / PUT / DELETE /api/todos
 
 | Layer               | Technology                                           |
 | ------------------- | ---------------------------------------------------- |
-| Framework           | [NestJS](https://nestjs.com) v10 (Platform: Express) |
+| Framework           | [NestJS](https://nestjs.com) 11 (Platform: Express)  |
 | Language            | TypeScript 5                                         |
-| Database            | MongoDB 7 via [Mongoose](https://mongoosejs.com) v8  |
+| Database            | MongoDB (Mongoose 8) **or** PostgreSQL (TypeORM) — one via `DB_PROFILE` |
 | Templating (SSR)    | EJS + express-ejs-layouts                            |
 | Caching             | Redis (ioredis) — optional, falls back to in-memory  |
 | Job Queue           | BullMQ (optional, requires Redis)                    |
@@ -263,6 +281,34 @@ todo-app/
 ├── nest-cli.json
 ├── tsconfig.json
 └── tsconfig.build.json
+```
+
+---
+
+## Database Profile
+
+Exactly **one** database is active per deployment.
+
+```
+DB_PROFILE=mongodb      →  MongooseModule + MongoTodosRepository
+DB_PROFILE=postgresql   →  TypeOrmModule  + TypeOrmTodosRepository
+```
+
+| Rule | Detail |
+|---|---|
+| **Pick one** | `DB_PROFILE=mongodb` or `DB_PROFILE=postgresql` — never both |
+| **URI** | `MONGODB_URI` or `POSTGRESQL_URI` — only the active profile's URI is required |
+| **Switching** | Restart with new profile; data does not auto-migrate between databases |
+| **API** | Identical `/api/todos` contract — clients unchanged |
+
+```bash
+# MongoDB (default)
+DB_PROFILE=mongodb
+MONGODB_URI=mongodb://localhost:27017/todos
+
+# PostgreSQL
+DB_PROFILE=postgresql
+POSTGRESQL_URI=postgresql://postgres:postgres@localhost:5432/todos
 ```
 
 ---
@@ -478,35 +524,22 @@ All SSR routes render EJS templates wrapped in `views/layout.ejs`.
 
 Copy `env.example` to `.env`:
 
-```env
-NODE_ENV=development
-PORT=3000
-
-# MongoDB
-MONGODB_URI=mongodb://localhost:27017/todos   # required
-
-# Redis (optional — set REDIS_ENABLED=true to activate)
-REDIS_ENABLED=false
-REDIS_HOST=127.0.0.1
-REDIS_PORT=6379
-REDIS_URL=                                    # overrides HOST+PORT when set
-
-# Cache
-CACHE_TTL_SECONDS=30
-```
+Copy `env.example` to `.env`:
 
 | Variable            | Required | Default       | Description                             |
 | ------------------- | -------- | ------------- | --------------------------------------- |
 | `NODE_ENV`          | no       | `development` | `development` \| `test` \| `production` |
 | `PORT`              | no       | `3000`        | HTTP listen port                        |
-| `MONGODB_URI`       | **yes**  | —             | Full MongoDB connection string          |
+| `DB_PROFILE`        | no       | `mongodb`     | **Active** DB: `mongodb` or `postgresql` |
+| `MONGODB_URI`       | when `mongodb` | —         | MongoDB connection string               |
+| `POSTGRESQL_URI`    | when `postgresql` | —      | PostgreSQL connection string            |
 | `REDIS_ENABLED`     | no       | `false`       | Enable Redis caching and BullMQ jobs    |
 | `REDIS_URL`         | no       | —             | Full Redis URL (overrides HOST+PORT)    |
 | `REDIS_HOST`        | no       | `127.0.0.1`   | Redis hostname                          |
 | `REDIS_PORT`        | no       | `6379`        | Redis port                              |
 | `CACHE_TTL_SECONDS` | no       | `30`          | Cache entry TTL in seconds              |
 
-Env vars are validated at startup via Joi. The app refuses to boot if `MONGODB_URI` is missing or any value is invalid.
+Env vars are validated at startup via Joi. The URI for the **active** `DB_PROFILE` must be set or the app refuses to boot.
 
 ---
 
@@ -515,7 +548,7 @@ Env vars are validated at startup via Joi. The app refuses to boot if `MONGODB_U
 ### Prerequisites
 
 - Node.js 20+
-- MongoDB 7 (local or remote)
+- MongoDB 7+ **or** PostgreSQL 17+ (one, matching `DB_PROFILE`)
 - Redis 7 (optional)
 
 ### Local Development
@@ -558,24 +591,28 @@ npm start
 
 ## Docker Compose
 
-Starts the app, MongoDB, and Redis as a single stack:
+Use **one** Compose profile per deployment:
 
 ```bash
-docker-compose up --build
+# MongoDB (default)
+docker compose --profile mongodb up --build
+
+# PostgreSQL
+DB_PROFILE=postgresql docker compose --profile postgresql up --build
+
+# Redis disabled
+REDIS_ENABLED=false docker compose --profile mongodb up --build
 ```
 
 ```
 Services:
-  app       → http://localhost:3000  (NestJS, NODE_ENV=development, REDIS_ENABLED=true)
-  mongodb   → localhost:27017        (mongo:7, persisted volume: mongo-data)
-  redis     → localhost:6379         (redis:7-alpine, AOF persistence)
+  app        → http://localhost:3000
+  mongodb    → :27017  (profile: mongodb)
+  postgresql → :5432   (profile: postgresql)
+  redis      → :6379   (optional)
 ```
 
-To run with Redis disabled:
-
-```bash
-REDIS_ENABLED=false docker-compose up --build
-```
+Do **not** activate both database profiles together.
 
 The app's **Dockerfile** is a three-stage build:
 
@@ -644,3 +681,12 @@ Every request is stamped with a UUID in `CorrelationIdMiddleware`. If the client
 ### BullMQ Jobs
 
 `TodoQueueService` is a no-op when Redis is disabled (`REDIS_ENABLED=false`) — the `enqueueTodoCreated` method returns immediately if the queue was never initialised. This means the job system adds zero overhead and zero failure risk in environments without Redis.
+
+---
+
+<p align="center">
+  <a href="../../README.md">← Polyglot Todo App (root)</a> ·
+  <a href="../todo-express/README.md">Express</a> ·
+  <a href="../todo-FastAPI/README.md">FastAPI</a> ·
+  <a href="../todo-spring/README.md">Spring Boot</a>
+</p>

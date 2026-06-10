@@ -2,7 +2,11 @@
 
 **Version:** 1.0.0-SNAPSHOT  
 **Framework:** Spring Boot 4.0.6 · Java 25  
+**Default port:** `3001`  
+**Part of:** [polyglot-todo-app](../../README.md)  
 **Last Updated:** June 2026
+
+> **Drop-in backend alternative.** Deploy this **instead of** NestJS, Express, or FastAPI — not alongside them. Connect to **one** database via `DB_PROFILE` (MongoDB *or* PostgreSQL).
 
 ---
 
@@ -39,13 +43,17 @@
 
 ## 1. System Overview
 
-`todo-spring` is a production-grade, synchronous REST API backend for a Todo application.
-It is the **Spring Boot 4 implementation** of a backend that also exists in NestJS and Express,
-all sharing the same HTTP contract so any frontend (React, React Native) can switch backends
-without code changes.
+`todo-spring` is the **Spring Boot 4 / Java 25** implementation of the polyglot Todo API — same HTTP contract as NestJS, Express, and FastAPI so React and React Native clients switch backends without code changes.
 
-**Scope:** CRUD operations for Todo items, with pagination, status filtering, cache-aside
-reads, optimistic concurrency control, and async post-write event processing.
+| Attribute | Value |
+|---|---|
+| Role | Enterprise JVM stack — layered architecture with full ADRs below |
+| Clients | React Web, React Native — point at port `3001` |
+| Persistence | `DB_PROFILE=mongodb` (Spring Data MongoDB) **or** `postgresql` (Spring Data JPA) |
+| Cache | Caffeine in-process (default); Redis optional extension |
+| Jobs | Spring `ApplicationEvent` + `@Async` (no Redis required) |
+
+**Scope:** CRUD, pagination, status filtering, cache-aside reads, optimistic concurrency (`__v`), async post-write events.
 
 **Non-scope:** Authentication, authorization, multi-tenancy, file attachments.
 
@@ -67,16 +75,15 @@ reads, optimistic concurrency control, and async post-write event processing.
 │                   Spring Boot 4  ·  Java 25                     │
 └───────────────────────┬──────────────────────┬──────────────────┘
                         │                      │
-              MongoDB   │                      │ Caffeine
+              ONE DB    │                      │ Caffeine
         ┌───────────────▼──────┐    ┌──────────▼───────────┐
         │  MongoDB 7+           │    │  In-Process Cache    │
-        │  Collection: todos    │    │  (Caffeine, 500 max) │
-        └───────────────────────┘    └──────────────────────┘
-                                              │
-                              Optional future │
+        │  or PostgreSQL 17     │    │  (Caffeine, 500 max) │
+        │  (DB_PROFILE)         │    └──────────────────────┘
+        └───────────────────────┘              │
+                              Optional         │
                         ┌─────────────────────▼──────────┐
                         │  Redis  (CACHE_TYPE=redis)      │
-                        │  Distributed cache / queues     │
                         └────────────────────────────────┘
 ```
 
@@ -87,7 +94,7 @@ reads, optimistic concurrency control, and async post-write event processing.
 | Style | Monolithic RESTful service (12-Factor App) |
 | Communication | Synchronous HTTP/REST |
 | Internal events | Asynchronous (Spring ApplicationEvent, thread pool) |
-| Persistence | Document store (MongoDB) |
+| Persistence | MongoDB (default) or PostgreSQL — one via `DB_PROFILE` |
 | Caching | Cache-aside with write-through eviction |
 | Deployment target | JVM process (Jar), Docker-ready |
 
@@ -699,7 +706,40 @@ the embedded MongoDB URI automatically.
 
 ## 4. Database Design
 
-### Collection: `todos`
+### Database Profile (pick one)
+
+Exactly **one** database is active per deployment, controlled by Spring profile / `DB_PROFILE`:
+
+```
+DB_PROFILE=mongodb      →  spring.profiles.active=mongodb  →  Spring Data MongoDB
+DB_PROFILE=postgresql   →  spring.profiles.active=postgresql →  Spring Data JPA
+```
+
+| Profile | Connection var | Auto-config |
+|---|---|---|
+| `mongodb` (default) | `MONGODB_URI` | JPA/DataSource beans excluded |
+| `postgresql` | `POSTGRESQL_URI` + user/password | MongoDB beans excluded |
+
+```bash
+# MongoDB (default)
+DB_PROFILE=mongodb ./mvnw spring-boot:run
+
+# PostgreSQL
+DB_PROFILE=postgresql POSTGRESQL_URI=jdbc:postgresql://localhost:5432/todos ./mvnw spring-boot:run
+```
+
+Docker Compose:
+
+```bash
+docker compose --profile mongodb up --build
+DB_PROFILE=postgresql docker compose --profile postgresql up --build
+```
+
+Do **not** activate both database profiles together. Switching databases requires restart; data does not auto-migrate.
+
+---
+
+### Collection / Table: `todos`
 
 ```
 Document Shape:
@@ -812,7 +852,7 @@ This catches real query behavior, index usage, and Spring Data mapping issues.
 ### Prerequisites
 
 - Java 25+ (Amazon Corretto 25 recommended)
-- MongoDB 7.x running and accessible
+- MongoDB 7+ **or** PostgreSQL 17+ (one, matching `DB_PROFILE`)
 
 ### Local Development
 
@@ -830,7 +870,11 @@ docker run -d -p 27017:27017 --name mongo mongo:7
 | Variable | Default | Description |
 |---|---|---|
 | `PORT` | `3001` | HTTP server port |
-| `MONGODB_URI` | `mongodb://localhost:27017/todos` | MongoDB connection string |
+| `DB_PROFILE` | `mongodb` | **Active** DB: `mongodb` or `postgresql` |
+| `MONGODB_URI` | `mongodb://localhost:27017/todos` | Used when `DB_PROFILE=mongodb` |
+| `POSTGRESQL_URI` | `jdbc:postgresql://localhost:5432/todos` | Used when `DB_PROFILE=postgresql` |
+| `POSTGRESQL_USER` | `postgres` | PostgreSQL username |
+| `POSTGRESQL_PASSWORD` | `postgres` | PostgreSQL password |
 | `CACHE_TYPE` | `caffeine` | Cache provider: `caffeine` or `redis` |
 | `CACHE_TTL_SECONDS` | `30` | Cache entry TTL in seconds |
 | `REDIS_ENABLED` | `false` | Redis feature toggle |
@@ -993,5 +1037,14 @@ to extract the user ID from JWT claims.
 - Extension point documented in Section 7.5
 
 ---
+
+---
+
+<p align="center">
+  <a href="../../README.md">← Polyglot Todo App (root)</a> ·
+  <a href="../todo-nestjs/README.md">NestJS</a> ·
+  <a href="../todo-express/README.md">Express</a> ·
+  <a href="../todo-FastAPI/README.md">FastAPI</a>
+</p>
 
 *End of Architecture Document*
