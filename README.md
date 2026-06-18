@@ -5,8 +5,9 @@
 A production-grade Todo application implemented as a **polyglot monorepo** — the same domain model, HTTP contract, caching strategy, and optimistic concurrency semantics expressed in **four interchangeable backend implementations** and consumed by **two client platforms**.
 
 **Important:**
-- **Backends** are **drop-in alternatives** — deploy **exactly one** at a time (NestJS *or* Express *or* FastAPI *or* Spring Boot).
-- **Databases** are **drop-in alternatives** — connect to **exactly one** at a time (MongoDB *or* PostgreSQL), selected via `DB_PROFILE`.
+
+- **Backends** are **drop-in alternatives** — deploy **exactly one** at a time (NestJS _or_ Express _or_ FastAPI _or_ Spring Boot).
+- **Databases** are **drop-in alternatives** — connect to **exactly one** at a time (MongoDB _or_ PostgreSQL), selected via `DB_PROFILE`.
 - **Clients** are **not** mutually exclusive — React Web and React Native can both run against the same active backend.
 - The monorepo holds all options so you can compare and migrate — not run backends or databases in parallel.
 
@@ -73,15 +74,15 @@ A production-grade Todo application implemented as a **polyglot monorepo** — t
 
 Most "todo app" tutorials teach a framework. This repository teaches **systems design**:
 
-| Principle | How it shows up here |
-|---|---|
-| **Contract-first design** | All four backends expose the same REST endpoints, status codes, and error envelope shape (see [contract notes](#contract-compatibility) for FastAPI field naming) |
-| **Framework-agnostic domain** | Todo CRUD, pagination, status filtering, priority, due dates, and `__v` optimistic locking are invariant |
-| **Progressive complexity** | Redis caching and background jobs are **optional** — every backend runs locally with a single database (MongoDB or PostgreSQL) |
-| **Production patterns** | Correlation IDs, structured errors, cache-aside reads, write-through eviction, graceful shutdown |
-| **Client portability** | React and React Native share types, hooks patterns, and API client shape — point at whichever single backend you deploy |
-| **Single-backend deployment** | Four implementations exist in source control; production runs **one** — chosen by your team's stack preference |
-| **Single-database deployment** | Two persistence options exist; production connects to **one** — `DB_PROFILE=mongodb` or `DB_PROFILE=postgresql` |
+| Principle                      | How it shows up here                                                                                                                                              |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Contract-first design**      | All four backends expose the same REST endpoints, status codes, and error envelope shape (see [contract notes](#contract-compatibility) for FastAPI field naming) |
+| **Framework-agnostic domain**  | Todo CRUD, pagination, status filtering, priority, due dates, and `__v` optimistic locking are invariant                                                          |
+| **Progressive complexity**     | Redis caching and background jobs are **optional** — every backend runs locally with a single database (MongoDB or PostgreSQL)                                    |
+| **Production patterns**        | Correlation IDs, structured errors, cache-aside reads, write-through eviction, graceful shutdown                                                                  |
+| **Client portability**         | React and React Native share types, hooks patterns, and API client shape — point at whichever single backend you deploy                                           |
+| **Single-backend deployment**  | Four implementations exist in source control; production runs **one** — chosen by your team's stack preference                                                    |
+| **Single-database deployment** | Two persistence options exist; production connects to **one** — `DB_PROFILE=mongodb` or `DB_PROFILE=postgresql`                                                   |
 
 Use this repo to **compare frameworks fairly**, **benchmark runtimes**, **onboard teams onto a stack**, or **prove an API contract** before committing to infrastructure.
 
@@ -95,19 +96,19 @@ The four backends and two database options are **functionally equivalent replace
                     ┌──────────────────────────────────────┐
                     │           Production / Dev           │
                     │                                      │
-  React Web ────────┤  ┌────────────────────────────┐    │
+  React Web ────────┤  ┌────────────────────────────-┐    │
   React Native ─────┤  │  Active backend (pick one): │    │
                     │  │  • NestJS  • Express        │    │
                     │  │  • FastAPI • Spring Boot    │    │
-                    │  └─────────────┬──────────────┘    │
-                    │                │                   │
-                    │  ┌─────────────▼──────────────┐    │
+                    │  └─────────────┬─────────────-─┘    │
+                    │                │                    │
+                    │  ┌─────────────▼─────────────-─┐    │
                     │  │  Active database (pick one):│    │
                     │  │  • MongoDB                  │    │
                     │  │  • PostgreSQL               │    │
-                    │  └─────────────┬──────────────┘    │
-                    │                │                   │
-                    │  ┌─────────────▼──────────────┐    │
+                    │  └─────────────┬─────────────-─┘    │
+                    │                │                    │
+                    │  ┌─────────────▼──────────────-┐    │
                     │  │  Redis (optional)           │    │
                     │  └─────────────────────────────┘    │
                     └──────────────────────────────────────┘
@@ -115,18 +116,19 @@ The four backends and two database options are **functionally equivalent replace
   Inactive options: present in repo, not deployed, not connected
 ```
 
-| Rule | Detail |
-|---|---|
-| **One backend** | Run a single backend process (or container) per environment |
-| **One database** | Set `DB_PROFILE=mongodb` **or** `DB_PROFILE=postgresql` — never both |
-| **Same contract** | Whichever backend you pick exposes identical `/api/todos` endpoints |
-| **Same data model** | Todo fields, pagination, and `__v` OCC are identical regardless of database |
-| **Switching backend** | Stop current backend, start replacement, point clients at its port |
+| Rule                   | Detail                                                                                                                      |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| **One backend**        | Run a single backend process (or container) per environment                                                                 |
+| **One database**       | Set `DB_PROFILE=mongodb` **or** `DB_PROFILE=postgresql` — never both                                                        |
+| **Same contract**      | Whichever backend you pick exposes identical `/api/todos` endpoints                                                         |
+| **Same data model**    | Todo fields, pagination, and `__v` OCC are identical regardless of database                                                 |
+| **Switching backend**  | Stop current backend, start replacement, point clients at its port                                                          |
 | **Switching database** | Stop backend, change `DB_PROFILE` + connection URI, restart — data does **not** auto-migrate between MongoDB and PostgreSQL |
-| **Both clients OK** | React Web and React Native may run together — they share the same backend URL/port |
-| **Not for** | Multi-backend mesh, dual-database writes, or polyglot persistence in one deployment |
+| **Both clients OK**    | React Web and React Native may run together — they share the same backend URL/port                                          |
+| **Not for**            | Multi-backend mesh, dual-database writes, or polyglot persistence in one deployment                                         |
 
 **Local development:**
+
 - **Never run two backends simultaneously** against the same database — they compete for cache keys and ports.
 - **Never set both `MONGODB_URI` and `POSTGRESQL_URI` as active** — `DB_PROFILE` selects exactly one persistence layer; the other connection is ignored.
 - Express and Spring Boot both default to port `3001`; only one backend can bind that port at a time.
@@ -248,47 +250,47 @@ All backends implement the same endpoints, query parameters, pagination shape, s
 
 ### Contract compatibility
 
-| Backend | JSON field style | Version field | Frontend-ready |
-|---|---|---|---|
-| NestJS | camelCase (`dueDate`, `createdAt`) | `__v` | ✅ default target |
-| Express | camelCase | `__v` | ✅ |
-| Spring Boot | camelCase (`@JsonProperty`) | `__v` | ✅ |
-| FastAPI | snake_case (`due_date`, `created_at`) | `revision` | ⚠️ requires field mapping |
+| Backend     | JSON field style                      | Version field | Frontend-ready            |
+| ----------- | ------------------------------------- | ------------- | ------------------------- |
+| NestJS      | camelCase (`dueDate`, `createdAt`)    | `__v`         | ✅ default target         |
+| Express     | camelCase                             | `__v`         | ✅                        |
+| Spring Boot | camelCase (`@JsonProperty`)           | `__v`         | ✅                        |
+| FastAPI     | snake_case (`due_date`, `created_at`) | `revision`    | ⚠️ requires field mapping |
 
 > Use **NestJS, Express, or Spring Boot** with the bundled React / React Native clients out of the box. For **FastAPI**, add Pydantic serialization aliases in `schemas.py` or map fields in the client — see [`backend/todo-FastAPI/README.md`](backend/todo-FastAPI/README.md).
 
 ### Endpoints
 
-| Method | Path | Description | Success |
-|---|---|---|---|
-| `GET` | `/health` | Liveness + dependency status | `200` |
-| `GET` | `/api/todos` | Paginated list with optional status filter | `200` |
-| `GET` | `/api/todos/:id` | Single todo by ID | `200` / `404` |
-| `POST` | `/api/todos` | Create todo | `201` |
-| `PUT` | `/api/todos/:id` | Partial update (all body fields optional) | `200` / `404` / `409` |
-| `DELETE` | `/api/todos/:id` | Hard delete | `200` / `404` |
+| Method   | Path             | Description                                | Success               |
+| -------- | ---------------- | ------------------------------------------ | --------------------- |
+| `GET`    | `/health`        | Liveness + dependency status               | `200`                 |
+| `GET`    | `/api/todos`     | Paginated list with optional status filter | `200`                 |
+| `GET`    | `/api/todos/:id` | Single todo by ID                          | `200` / `404`         |
+| `POST`   | `/api/todos`     | Create todo                                | `201`                 |
+| `PUT`    | `/api/todos/:id` | Partial update (all body fields optional)  | `200` / `404` / `409` |
+| `DELETE` | `/api/todos/:id` | Hard delete                                | `200` / `404`         |
 
 ### Query Parameters — `GET /api/todos`
 
-| Param | Type | Default | Constraints |
-|---|---|---|---|
-| `page` | integer | `1` | min 1 |
-| `limit` | integer | `10` | min 1, max 100 |
-| `status` | string | — | `todo` \| `doing` \| `done` |
+| Param    | Type    | Default | Constraints                 |
+| -------- | ------- | ------- | --------------------------- |
+| `page`   | integer | `1`     | min 1                       |
+| `limit`  | integer | `10`    | min 1, max 100              |
+| `status` | string  | —       | `todo` \| `doing` \| `done` |
 
 ### Domain Model
 
-| Field | Type | Required | Default | Notes |
-|---|---|---|---|---|
-| `_id` | string | auto | — | MongoDB ObjectId or UUID string (same API shape in both DB profiles) |
-| `title` | string | yes | — | max 200 chars |
-| `description` | string | no | — | max 1000 chars |
-| `dueDate` | ISO-8601 | no | — | |
-| `status` | enum | yes | `todo` | `todo` \| `doing` \| `done` |
-| `priority` | integer | yes | `3` | 1 (highest) – 5 (lowest) |
-| `createdAt` | ISO-8601 | auto | — | |
-| `updatedAt` | ISO-8601 | auto | — | |
-| `__v` | integer | auto | `0` | Optimistic concurrency version |
+| Field         | Type     | Required | Default | Notes                                                                |
+| ------------- | -------- | -------- | ------- | -------------------------------------------------------------------- |
+| `_id`         | string   | auto     | —       | MongoDB ObjectId or UUID string (same API shape in both DB profiles) |
+| `title`       | string   | yes      | —       | max 200 chars                                                        |
+| `description` | string   | no       | —       | max 1000 chars                                                       |
+| `dueDate`     | ISO-8601 | no       | —       |                                                                      |
+| `status`      | enum     | yes      | `todo`  | `todo` \| `doing` \| `done`                                          |
+| `priority`    | integer  | yes      | `3`     | 1 (highest) – 5 (lowest)                                             |
+| `createdAt`   | ISO-8601 | auto     | —       |                                                                      |
+| `updatedAt`   | ISO-8601 | auto     | —       |                                                                      |
+| `__v`         | integer  | auto     | `0`     | Optimistic concurrency version                                       |
 
 **Index:** `{ status: 1, dueDate: 1 }`
 
@@ -296,7 +298,15 @@ All backends implement the same endpoints, query parameters, pagination shape, s
 
 ```json
 {
-  "items": [{ "_id": "...", "title": "Buy milk", "status": "todo", "priority": 3, "__v": 0 }],
+  "items": [
+    {
+      "_id": "...",
+      "title": "Buy milk",
+      "status": "todo",
+      "priority": 3,
+      "__v": 0
+    }
+  ],
   "total": 42,
   "page": 1,
   "limit": 10
@@ -342,15 +352,15 @@ Send `__v` from the last read. If another client incremented the version, the se
 
 ### HTTP Status Reference
 
-| Code | Meaning |
-|---|---|
-| `200` | Successful read, update, or delete |
-| `201` | Todo created |
-| `400` | Malformed query/path parameters |
-| `404` | Todo not found |
+| Code  | Meaning                                       |
+| ----- | --------------------------------------------- |
+| `200` | Successful read, update, or delete            |
+| `201` | Todo created                                  |
+| `400` | Malformed query/path parameters               |
+| `404` | Todo not found                                |
 | `409` | Optimistic concurrency conflict (`__v` stale) |
-| `422` | Request body validation failure |
-| `500` | Unhandled server error |
+| `422` | Request body validation failure               |
+| `500` | Unhandled server error                        |
 
 ---
 
@@ -380,12 +390,12 @@ GET /api/todos?page=1&limit=10&status=todo
 POST / PUT / DELETE  →  invalidate all keys matching "todos:list:*"
 ```
 
-| Backend | Cache backend (default) | Cache backend (optional) |
-|---|---|---|
-| NestJS | In-memory Map | Redis (ioredis) |
-| Express | In-memory Map | Redis (ioredis) |
-| FastAPI | dict shim | redis.asyncio |
-| Spring Boot | Caffeine (500 entries) | Redis (configurable) |
+| Backend     | Cache backend (default) | Cache backend (optional) |
+| ----------- | ----------------------- | ------------------------ |
+| NestJS      | In-memory Map           | Redis (ioredis)          |
+| Express     | In-memory Map           | Redis (ioredis)          |
+| FastAPI     | dict shim               | redis.asyncio            |
+| Spring Boot | Caffeine (500 entries)  | Redis (configurable)     |
 
 Set `REDIS_ENABLED=true` to activate distributed caching. Without Redis, every backend degrades gracefully to in-process storage.
 
@@ -393,12 +403,12 @@ Set `REDIS_ENABLED=true` to activate distributed caching. Without Redis, every b
 
 On `POST /api/todos`, a `todo_created` event is enqueued for async processing (logging, future webhooks, analytics):
 
-| Backend | Queue technology | Requires Redis |
-|---|---|---|
-| NestJS | BullMQ | yes |
-| Express | BullMQ | yes |
-| FastAPI | ARQ (separate worker process) | yes |
-| Spring Boot | Spring `ApplicationEvent` + `@Async` | no |
+| Backend     | Queue technology                     | Requires Redis |
+| ----------- | ------------------------------------ | -------------- |
+| NestJS      | BullMQ                               | yes            |
+| Express     | BullMQ                               | yes            |
+| FastAPI     | ARQ (separate worker process)        | yes            |
+| Spring Boot | Spring `ApplicationEvent` + `@Async` | no             |
 
 ### 4. Optimistic Concurrency Control
 
@@ -420,17 +430,18 @@ DB_PROFILE=mongodb      →  connect via MONGODB_URI     (default)
 DB_PROFILE=postgresql   →  connect via POSTGRESQL_URI
 ```
 
-| Profile | ODM / ORM | Connection var | When to use |
-|---|---|---|---|
-| `mongodb` (default) | Mongoose / Beanie / Spring Data MongoDB | `MONGODB_URI` | Document model, flexible schema, `__v` via version key |
-| `postgresql` | TypeORM / SQLAlchemy + asyncpg / Spring Data JPA | `POSTGRESQL_URI` | Relational model, SQL tooling, ACID transactions |
+| Profile             | ODM / ORM                                        | Connection var   | When to use                                            |
+| ------------------- | ------------------------------------------------ | ---------------- | ------------------------------------------------------ |
+| `mongodb` (default) | Mongoose / Beanie / Spring Data MongoDB          | `MONGODB_URI`    | Document model, flexible schema, `__v` via version key |
+| `postgresql`        | TypeORM / SQLAlchemy + asyncpg / Spring Data JPA | `POSTGRESQL_URI` | Relational model, SQL tooling, ACID transactions       |
 
-| Backend | How to switch |
-|---|---|
-| NestJS, Express, FastAPI | Set `DB_PROFILE` in `.env` |
-| Spring Boot | `DB_PROFILE=postgresql` or Spring profile `postgresql` |
+| Backend                  | How to switch                                          |
+| ------------------------ | ------------------------------------------------------ |
+| NestJS, Express, FastAPI | Set `DB_PROFILE` in `.env`                             |
+| Spring Boot              | `DB_PROFILE=postgresql` or Spring profile `postgresql` |
 
 **Rules:**
+
 - Set **one** `DB_PROFILE` value — never `mongodb` and `postgresql` at the same time.
 - Only the connection URI matching the active profile is used.
 - Switching databases requires a backend restart. Data is **not** automatically synced between MongoDB and PostgreSQL.
@@ -446,15 +457,15 @@ DB_PROFILE=postgresql   →  connect via POSTGRESQL_URI
 
 > The reference implementation — full-stack with SSR pages **and** a REST API. Deploy this **instead of** Express, FastAPI, or Spring Boot.
 
-| Attribute | Value |
-|---|---|
-| Framework | NestJS 11 (Express platform) |
-| Language | TypeScript 5 |
-| Default port | `3000` |
-| Unique feature | **EJS server-side rendering** at `/todos/*` |
-| Validation | class-validator + class-transformer + Joi (config) |
-| Testing | Jest + Supertest + mongodb-memory-server |
-| Docs | Compodoc-generated API documentation |
+| Attribute      | Value                                              |
+| -------------- | -------------------------------------------------- |
+| Framework      | NestJS 11 (Express platform)                       |
+| Language       | TypeScript 5                                       |
+| Default port   | `3000`                                             |
+| Unique feature | **EJS server-side rendering** at `/todos/*`        |
+| Validation     | class-validator + class-transformer + Joi (config) |
+| Testing        | Jest + Supertest + mongodb-memory-server           |
+| Docs           | Compodoc-generated API documentation               |
 
 **Module graph:**
 
@@ -473,13 +484,13 @@ AppModule
 
 **SSR routes** (NestJS only):
 
-| Method | Path | Action |
-|---|---|---|
-| `GET` | `/todos` | List page |
-| `GET` | `/todos/new` | Create form |
-| `GET` | `/todos/:id` | Detail page |
-| `GET` | `/todos/:id/edit` | Edit form |
-| `POST` | `/todos` | Create (form) |
+| Method | Path                | Action        |
+| ------ | ------------------- | ------------- |
+| `GET`  | `/todos`            | List page     |
+| `GET`  | `/todos/new`        | Create form   |
+| `GET`  | `/todos/:id`        | Detail page   |
+| `GET`  | `/todos/:id/edit`   | Edit form     |
+| `POST` | `/todos`            | Create (form) |
 | `POST` | `/todos/:id/update` | Update (form) |
 | `POST` | `/todos/:id/delete` | Delete (form) |
 
@@ -499,14 +510,14 @@ npm install && npm run start:dev
 
 > Minimal, explicit, framework-free — the same features without NestJS decorators. Deploy this **instead of** NestJS, FastAPI, or Spring Boot.
 
-| Attribute | Value |
-|---|---|
-| Framework | Express 5 |
-| Language | TypeScript 5 |
-| Default port | `3001` |
-| Validation | Zod 3 (schema = types + runtime) |
-| Logging | Winston |
-| Testing | Vitest + Supertest + mongodb-memory-server |
+| Attribute    | Value                                      |
+| ------------ | ------------------------------------------ |
+| Framework    | Express 5                                  |
+| Language     | TypeScript 5                               |
+| Default port | `3001`                                     |
+| Validation   | Zod 3 (schema = types + runtime)           |
+| Logging      | Winston                                    |
+| Testing      | Vitest + Supertest + mongodb-memory-server |
 
 **Key design choices:**
 
@@ -543,15 +554,15 @@ npm install && npm run dev
 
 > Async-first Python — dual database support with Pydantic v2 end-to-end. Deploy this **instead of** NestJS, Express, or Spring Boot.
 
-| Attribute | Value |
-|---|---|
-| Framework | FastAPI 0.115+ |
-| Server | Uvicorn (ASGI) |
-| Language | Python 3.12 |
-| Default port | `8000` |
-| Validation | Pydantic v2 + pydantic-settings |
-| Jobs | ARQ (separate `worker.py` process) |
-| Testing | pytest + pytest-asyncio + httpx + fakeredis |
+| Attribute    | Value                                       |
+| ------------ | ------------------------------------------- |
+| Framework    | FastAPI 0.115+                              |
+| Server       | Uvicorn (ASGI)                              |
+| Language     | Python 3.12                                 |
+| Default port | `8000`                                      |
+| Validation   | Pydantic v2 + pydantic-settings             |
+| Jobs         | ARQ (separate `worker.py` process)          |
+| Testing      | pytest + pytest-asyncio + httpx + fakeredis |
 
 **Module layout:**
 
@@ -593,16 +604,16 @@ uvicorn app.main:app --reload --port 8000
 
 > Enterprise JVM stack — layered architecture with full ADR documentation. Deploy this **instead of** NestJS, Express, or FastAPI.
 
-| Attribute | Value |
-|---|---|
-| Framework | Spring Boot 4.0.6 |
-| Language | Java 25 |
-| Default port | `3001` |
-| Validation | Jakarta Bean Validation |
-| Cache | Caffeine (default) / Redis (optional) |
-| Async events | `ApplicationEventPublisher` + `@Async` |
-| Testing | JUnit 5 + MockMvc + embedded MongoDB (Flapdoodle) |
-| DB profiles | MongoDB (default) + PostgreSQL via `DB_PROFILE` / Spring profile |
+| Attribute    | Value                                                            |
+| ------------ | ---------------------------------------------------------------- |
+| Framework    | Spring Boot 4.0.6                                                |
+| Language     | Java 25                                                          |
+| Default port | `3001`                                                           |
+| Validation   | Jakarta Bean Validation                                          |
+| Cache        | Caffeine (default) / Redis (optional)                            |
+| Async events | `ApplicationEventPublisher` + `@Async`                           |
+| Testing      | JUnit 5 + MockMvc + embedded MongoDB (Flapdoodle)                |
+| DB profiles  | MongoDB (default) + PostgreSQL via `DB_PROFILE` / Spring profile |
 
 **Package structure:**
 
@@ -635,15 +646,15 @@ Both clients are **backend-agnostic** — they connect to **whichever single bac
 
 ### React Web (`todo-react`)
 
-| Layer | Technology |
-|---|---|
-| Framework | React 19 |
-| Build | Vite 8 + TypeScript 6 |
-| Styling | Tailwind CSS v4 (`@tailwindcss/vite`) |
-| Data fetching | TanStack React Query v5 |
-| HTTP | Axios |
-| Forms | React Hook Form + Zod 4 |
-| Icons | Lucide React |
+| Layer         | Technology                            |
+| ------------- | ------------------------------------- |
+| Framework     | React 19                              |
+| Build         | Vite 8 + TypeScript 6                 |
+| Styling       | Tailwind CSS v4 (`@tailwindcss/vite`) |
+| Data fetching | TanStack React Query v5               |
+| HTTP          | Axios                                 |
+| Forms         | React Hook Form + Zod 4               |
+| Icons         | Lucide React                          |
 
 **Architecture:**
 
@@ -699,15 +710,15 @@ npm install && npm run dev
 
 ### React Native (`todo-react-native`)
 
-| Layer | Technology |
-|---|---|
-| Framework | React Native 0.85 + Expo 56 |
-| Navigation | Single-screen (`TodoListScreen`); React Navigation 7 in deps for extension |
-| Styling | NativeWind 4 (Tailwind for RN) |
-| Data fetching | TanStack React Query v5 |
-| HTTP | Axios |
-| Forms | React Hook Form + Zod 4 |
-| Gestures | react-native-gesture-handler + Reanimated 4 |
+| Layer         | Technology                                                                 |
+| ------------- | -------------------------------------------------------------------------- |
+| Framework     | React Native 0.85 + Expo 56                                                |
+| Navigation    | Single-screen (`TodoListScreen`); React Navigation 7 in deps for extension |
+| Styling       | NativeWind 4 (Tailwind for RN)                                             |
+| Data fetching | TanStack React Query v5                                                    |
+| HTTP          | Axios                                                                      |
+| Forms         | React Hook Form + Zod 4                                                    |
+| Gestures      | react-native-gesture-handler + Reanimated 4                                |
 
 **Architecture:**
 
@@ -731,15 +742,15 @@ src/
 
 ```typescript
 // constants/api.ts
-const LOCAL_HOST = Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+const LOCAL_HOST = Platform.OS === "android" ? "10.0.2.2" : "localhost";
 export const API_BASE_URL = `http://${LOCAL_HOST}:3000/api`;
 ```
 
-| Environment | Host to use |
-|---|---|
-| iOS Simulator | `localhost` |
-| Android Emulator | `10.0.2.2` |
-| Physical device | Your machine's LAN IP |
+| Environment      | Host to use           |
+| ---------------- | --------------------- |
+| iOS Simulator    | `localhost`           |
+| Android Emulator | `10.0.2.2`            |
+| Physical device  | Your machine's LAN IP |
 
 ```bash
 cd frontend/todo-react-native
@@ -763,16 +774,16 @@ npm install && npm start
 
 Both frontends share `types/todo.ts`, `hooks/useTodos.ts`, and `api/todos.ts` patterns. They can run **simultaneously** against one backend.
 
-| Attribute | React Web | React Native |
-|---|---|---|
-| **Default dev URL** | `http://localhost:5173` | Expo Metro |
-| **API connection** | Vite proxy `/api` → backend | Direct `API_BASE_URL` in `constants/api.ts` |
-| **Default backend port** | `3000` (NestJS proxy target) | `3000` |
-| **List layout** | CSS Grid (3 columns) | `FlatList` |
-| **Page size** | 9 | 10 |
-| **Refresh** | Header button + `refetch` | `RefreshControl` pull-to-refresh |
-| **Forms** | Modal overlay | Full-screen `Modal` |
-| **Styling** | Tailwind CSS v4 | NativeWind v4 |
+| Attribute                | React Web                    | React Native                                |
+| ------------------------ | ---------------------------- | ------------------------------------------- |
+| **Default dev URL**      | `http://localhost:5173`      | Expo Metro                                  |
+| **API connection**       | Vite proxy `/api` → backend  | Direct `API_BASE_URL` in `constants/api.ts` |
+| **Default backend port** | `3000` (NestJS proxy target) | `3000`                                      |
+| **List layout**          | CSS Grid (3 columns)         | `FlatList`                                  |
+| **Page size**            | 9                            | 10                                          |
+| **Refresh**              | Header button + `refetch`    | `RefreshControl` pull-to-refresh            |
+| **Forms**                | Modal overlay                | Full-screen `Modal`                         |
+| **Styling**              | Tailwind CSS v4              | NativeWind v4                               |
 
 ---
 
@@ -780,24 +791,24 @@ Both frontends share `types/todo.ts`, `hooks/useTodos.ts`, and `api/todos.ts` pa
 
 Use this table to **choose** which single backend to deploy — not to run them all.
 
-| Capability | NestJS | Express | FastAPI | Spring Boot |
-|---|---|---|---|---|
-| **Language** | TypeScript | TypeScript | Python 3.12 | Java 25 |
-| **Paradigm** | Decorator DI | Functional factories | Async DI (Depends) | Annotation DI |
-| **Default port** | 3000 | 3001 | 8000 | 3001 |
-| **SSR pages** | ✅ EJS | ❌ | ❌ | ❌ |
-| **OpenAPI docs** | Manual | Manual | ✅ Auto-generated | Manual |
-| **Validation** | class-validator | Zod | Pydantic v2 | Jakarta Validation |
-| **DB profile: MongoDB** | Mongoose | Mongoose | Beanie + Motor | Spring Data MongoDB |
-| **DB profile: PostgreSQL** | TypeORM | TypeORM | SQLAlchemy + asyncpg | Spring Data JPA |
-| **DB switch mechanism** | `DB_PROFILE` | `DB_PROFILE` | `DB_PROFILE` | Spring profile |
-| **Cache (default)** | In-memory | In-memory | In-memory | Caffeine |
-| **Cache (optional)** | Redis | Redis | Redis | Redis |
-| **Job queue** | BullMQ | BullMQ | ARQ | Spring Events |
-| **Correlation ID** | Middleware + Interceptor | Middleware | ASGI Middleware | Servlet Filter |
-| **OCC (version field)** | `__v` | `__v` | `revision` | `__v` |
-| **Docker** | ✅ Multi-stage | ✅ Multi-stage | ✅ Multi-stage | ✅ Multi-stage |
-| **Test runner** | Jest | Vitest | pytest | JUnit 5 |
+| Capability                 | NestJS                   | Express              | FastAPI              | Spring Boot         |
+| -------------------------- | ------------------------ | -------------------- | -------------------- | ------------------- |
+| **Language**               | TypeScript               | TypeScript           | Python 3.12          | Java 25             |
+| **Paradigm**               | Decorator DI             | Functional factories | Async DI (Depends)   | Annotation DI       |
+| **Default port**           | 3000                     | 3001                 | 8000                 | 3001                |
+| **SSR pages**              | ✅ EJS                   | ❌                   | ❌                   | ❌                  |
+| **OpenAPI docs**           | Manual                   | Manual               | ✅ Auto-generated    | Manual              |
+| **Validation**             | class-validator          | Zod                  | Pydantic v2          | Jakarta Validation  |
+| **DB profile: MongoDB**    | Mongoose                 | Mongoose             | Beanie + Motor       | Spring Data MongoDB |
+| **DB profile: PostgreSQL** | TypeORM                  | TypeORM              | SQLAlchemy + asyncpg | Spring Data JPA     |
+| **DB switch mechanism**    | `DB_PROFILE`             | `DB_PROFILE`         | `DB_PROFILE`         | Spring profile      |
+| **Cache (default)**        | In-memory                | In-memory            | In-memory            | Caffeine            |
+| **Cache (optional)**       | Redis                    | Redis                | Redis                | Redis               |
+| **Job queue**              | BullMQ                   | BullMQ               | ARQ                  | Spring Events       |
+| **Correlation ID**         | Middleware + Interceptor | Middleware           | ASGI Middleware      | Servlet Filter      |
+| **OCC (version field)**    | `__v`                    | `__v`                | `revision`           | `__v`               |
+| **Docker**                 | ✅ Multi-stage           | ✅ Multi-stage       | ✅ Multi-stage       | ✅ Multi-stage      |
+| **Test runner**            | Jest                     | Vitest               | pytest               | JUnit 5             |
 
 ---
 
@@ -805,14 +816,14 @@ Use this table to **choose** which single backend to deploy — not to run them 
 
 ### Prerequisites
 
-| Tool | Version | Used by |
-|---|---|---|
-| Node.js | ≥ 20 | NestJS, Express, React, React Native |
-| Python | 3.12 | FastAPI |
-| Java | 25 | Spring Boot |
+| Tool                      | Version  | Used by                                              |
+| ------------------------- | -------- | ---------------------------------------------------- |
+| Node.js                   | ≥ 20     | NestJS, Express, React, React Native                 |
+| Python                    | 3.12     | FastAPI                                              |
+| Java                      | 25       | Spring Boot                                          |
 | MongoDB **or** PostgreSQL | 7+ / 17+ | All backends — **one** per deployment (`DB_PROFILE`) |
-| Redis | 7+ | Optional (cache + jobs) |
-| Docker | Latest | All backends |
+| Redis                     | 7+       | Optional (cache + jobs)                              |
+| Docker                    | Latest   | All backends                                         |
 
 ### Fastest path — one backend + React
 
@@ -850,21 +861,21 @@ React Web uses the Vite proxy. React Native uses `src/constants/api.ts` (default
 
 ### Choose your backend (run only one)
 
-| Backend | Start command | React proxy target | RN `API_BASE_URL` port |
-|---|---|---|---|
-| NestJS | `npm run start:dev` | `http://localhost:3000` | `:3000` |
-| Express | `npm run dev` | `http://localhost:3001` | `:3001` |
-| FastAPI | `uvicorn app.main:app --reload` | `http://localhost:8000` | `:8000` |
-| Spring Boot | `./mvnw spring-boot:run` | `http://localhost:3001` | `:3001` |
+| Backend     | Start command                   | React proxy target      | RN `API_BASE_URL` port |
+| ----------- | ------------------------------- | ----------------------- | ---------------------- |
+| NestJS      | `npm run start:dev`             | `http://localhost:3000` | `:3000`                |
+| Express     | `npm run dev`                   | `http://localhost:3001` | `:3001`                |
+| FastAPI     | `uvicorn app.main:app --reload` | `http://localhost:8000` | `:8000`                |
+| Spring Boot | `./mvnw spring-boot:run`        | `http://localhost:3001` | `:3001`                |
 
 The API contract is identical — only the port changes. **Stop the current backend before starting another.** Express and Spring Boot both use port `3001` by default; NestJS uses `3000`, FastAPI uses `8000`.
 
 ### Choose your database (connect only one)
 
-| Profile | Set in `.env` | Docker Compose command | Connection var |
-|---|---|---|---|
-| MongoDB (default) | `DB_PROFILE=mongodb` | `docker compose --profile mongodb up -d` | `MONGODB_URI` |
-| PostgreSQL | `DB_PROFILE=postgresql` | `DB_PROFILE=postgresql docker compose --profile postgresql up -d` | `POSTGRESQL_URI` |
+| Profile           | Set in `.env`           | Docker Compose command                                            | Connection var   |
+| ----------------- | ----------------------- | ----------------------------------------------------------------- | ---------------- |
+| MongoDB (default) | `DB_PROFILE=mongodb`    | `docker compose --profile mongodb up -d`                          | `MONGODB_URI`    |
+| PostgreSQL        | `DB_PROFILE=postgresql` | `DB_PROFILE=postgresql docker compose --profile postgresql up -d` | `POSTGRESQL_URI` |
 
 Each database is gated behind a Compose **profile** (`mongodb` or `postgresql`). Start **one** profile per deployment — never `--profile mongodb --profile postgresql` together.
 
@@ -872,14 +883,14 @@ Each database is gated behind a Compose **profile** (`mongodb` or `postgresql`).
 
 ## Testing Strategy
 
-| Project | Framework | Isolation | Coverage |
-|---|---|---|---|
-| `todo-nestjs` | Jest + Supertest | mongodb-memory-server | Unit + E2E |
-| `todo-express` | Vitest + Supertest | mongodb-memory-server | Unit + integration |
-| `todo-FastAPI` | pytest-asyncio + httpx | mongomock-motor + fakeredis | API + service |
-| `todo-spring` | JUnit 5 + MockMvc | Embedded MongoDB (Flapdoodle) | Integration |
-| `todo-react` | ESLint | — | `npm run lint` |
-| `todo-react-native` | TypeScript | — | `npx tsc --noEmit` (manual) |
+| Project             | Framework              | Isolation                     | Coverage                    |
+| ------------------- | ---------------------- | ----------------------------- | --------------------------- |
+| `todo-nestjs`       | Jest + Supertest       | mongodb-memory-server         | Unit + E2E                  |
+| `todo-express`      | Vitest + Supertest     | mongodb-memory-server         | Unit + integration          |
+| `todo-FastAPI`      | pytest-asyncio + httpx | mongomock-motor + fakeredis   | API + service               |
+| `todo-spring`       | JUnit 5 + MockMvc      | Embedded MongoDB (Flapdoodle) | Integration                 |
+| `todo-react`        | ESLint                 | —                             | `npm run lint`              |
+| `todo-react-native` | TypeScript             | —                             | `npx tsc --noEmit` (manual) |
 
 **Shared test scenarios** (every backend):
 
@@ -934,28 +945,28 @@ Do **not** run `docker compose up` in all four `backend/*` directories simultane
 
 ### Default Ports
 
-| Service | Port |
-|---|---|
-| NestJS | 3000 |
-| Express | 3001 |
-| FastAPI | 8000 |
-| Spring Boot | 3001 |
-| React (Vite dev) | 5173 |
-| MongoDB | 27017 |
-| Redis | 6379 |
-| PostgreSQL | 5432 |
+| Service          | Port  |
+| ---------------- | ----- |
+| NestJS           | 3000  |
+| Express          | 3001  |
+| FastAPI          | 8000  |
+| Spring Boot      | 3001  |
+| React (Vite dev) | 5173  |
+| MongoDB          | 27017 |
+| Redis            | 6379  |
+| PostgreSQL       | 5432  |
 
 ### Environment Variables (common)
 
-| Variable | Description | Default |
-|---|---|---|
-| `PORT` | HTTP listen port | varies by backend |
-| `DB_PROFILE` | **Active** database: `mongodb` or `postgresql` (mutually exclusive) | `mongodb` |
-| `MONGODB_URI` | MongoDB connection — used only when `DB_PROFILE=mongodb` | `mongodb://localhost:27017/todos` |
-| `POSTGRESQL_URI` | PostgreSQL connection — used only when `DB_PROFILE=postgresql` | — |
-| `REDIS_ENABLED` | Enable Redis cache + jobs | `false` |
-| `REDIS_HOST` / `REDIS_PORT` | Redis connection | `127.0.0.1:6379` |
-| `CACHE_TTL_SECONDS` | List cache TTL | `30` |
+| Variable                    | Description                                                         | Default                           |
+| --------------------------- | ------------------------------------------------------------------- | --------------------------------- |
+| `PORT`                      | HTTP listen port                                                    | varies by backend                 |
+| `DB_PROFILE`                | **Active** database: `mongodb` or `postgresql` (mutually exclusive) | `mongodb`                         |
+| `MONGODB_URI`               | MongoDB connection — used only when `DB_PROFILE=mongodb`            | `mongodb://localhost:27017/todos` |
+| `POSTGRESQL_URI`            | PostgreSQL connection — used only when `DB_PROFILE=postgresql`      | —                                 |
+| `REDIS_ENABLED`             | Enable Redis cache + jobs                                           | `false`                           |
+| `REDIS_HOST` / `REDIS_PORT` | Redis connection                                                    | `127.0.0.1:6379`                  |
+| `CACHE_TTL_SECONDS`         | List cache TTL                                                      | `30`                              |
 
 ---
 
@@ -1013,14 +1024,14 @@ Do **not** run `docker compose up` in all four `backend/*` directories simultane
 
 ## Further Reading
 
-| Document | Contents |
-|---|---|
-| [`backend/todo-nestjs/README.md`](backend/todo-nestjs/README.md) | Module graph, SSR routes, cache flow, Compodoc |
-| [`backend/todo-express/README.md`](backend/todo-express/README.md) | Express 5 patterns, Zod validation, graceful shutdown |
-| [`backend/todo-FastAPI/README.md`](backend/todo-FastAPI/README.md) | ASGI lifecycle, ARQ worker, dual DB repositories |
-| [`backend/todo-spring/README.md`](backend/todo-spring/README.md) | Full HLD/LLD, ADRs, database design, deployment |
-| [`frontend/todo-react/README.md`](frontend/todo-react/README.md) | React Query hooks, Vite proxy, component map, backend switching |
-| [`frontend/todo-react-native/README.md`](frontend/todo-react-native/README.md) | Expo setup, platform hosts, FlatList UX, API_BASE_URL config |
+| Document                                                                       | Contents                                                        |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------------- |
+| [`backend/todo-nestjs/README.md`](backend/todo-nestjs/README.md)               | Module graph, SSR routes, cache flow, Compodoc                  |
+| [`backend/todo-express/README.md`](backend/todo-express/README.md)             | Express 5 patterns, Zod validation, graceful shutdown           |
+| [`backend/todo-FastAPI/README.md`](backend/todo-FastAPI/README.md)             | ASGI lifecycle, ARQ worker, dual DB repositories                |
+| [`backend/todo-spring/README.md`](backend/todo-spring/README.md)               | Full HLD/LLD, ADRs, database design, deployment                 |
+| [`frontend/todo-react/README.md`](frontend/todo-react/README.md)               | React Query hooks, Vite proxy, component map, backend switching |
+| [`frontend/todo-react-native/README.md`](frontend/todo-react-native/README.md) | Expo setup, platform hosts, FlatList UX, API_BASE_URL config    |
 
 ---
 
